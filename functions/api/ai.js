@@ -58,9 +58,12 @@ async function availableModels(env) {
     .map((m) => String(m.name || '').replace(/^models\//, ''))
     .filter((n) => /flash/.test(n) && !/(tts|image|live|audio|embedding|robotics|preview|exp|latest)/.test(n));
   const ver = (n) => (n.match(/(\d+(?:\.\d+)?)/) || [0, 0])[1] * 1;
-  const lite = (n) => (/lite/.test(n) ? 1 : 0);
-  names.sort((a, b) => lite(a) - lite(b) || ver(b) - ver(a) || a.length - b.length);
-  modelList = names;
+  const byNewest = (a, b) => ver(b) - ver(a) || a.length - b.length;
+  // alternate Flash and Flash-Lite: when the Flash models are overloaded together, Lite often is not
+  const flash = names.filter((n) => !/lite/.test(n)).sort(byNewest);
+  const lite = names.filter((n) => /lite/.test(n)).sort(byNewest);
+  modelList = [];
+  for (let i = 0; i < Math.max(flash.length, lite.length); i++) { if (flash[i]) modelList.push(flash[i]); if (lite[i]) modelList.push(lite[i]); }
   return modelList;
 }
 let workingModel = null; // last model that answered, tried first next time
@@ -122,7 +125,7 @@ async function generate(env, body) {
   const tried = [], notes = [];
   let model, res = null, data = null, triedList = Boolean(listed.length);
 
-  while (queue.length && tried.length < 4) {
+  while (queue.length && tried.length < 5) {
     const left = BUDGET_MS - (Date.now() - started);
     if (left < 8_000) break;
     model = queue.shift();
