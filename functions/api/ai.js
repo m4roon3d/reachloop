@@ -23,11 +23,11 @@ function sameSecret(a, b) {
 
 const GEMINI_TIMEOUT_MS = 150_000;
 let thinkingSupported = true;
-async function callGemini(env, model, parts, wantJson) {
+async function callGemini(env, model, parts, wantJson, timeoutMs = GEMINI_TIMEOUT_MS) {
   const send = (withThinking) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
       contents: [{ role: 'user', parts }],
       generationConfig: {
@@ -114,38 +114,44 @@ async function generate(env, body) {
 
   const started = Date.now();
   const wantJson = Boolean(body.json);
-  const busy = (st) => st === 503 || st === 500 || st === 429;
-  const queue = [env.GEMINI_MODEL || workingModel || DEFAULT_MODEL];
-  const tried = [];
-  let model, res, data, listed = false;
-  try {
-    while (queue.length && tried.length < 4 && Date.now() - started < 110_000) {
-      model = queue.shift();
-      if (tried.includes(model)) continue;
-      tried.push(model);
-      res = await callGemini(env, model, parts, wantJson);
+  const BUDGET_MS = 125_000;       // whole request, well inside the app's 170s limit
+  const PER_MODEL_MS = Number(env.AI_PER_MODEL_MS) || 40_000; // a model that has not answered by then is treated as busy
+  const slow = (st) => st === 503 || st === 500 || st === 502 || st === 504 || st === 524 || st === 429;
+  const listed = env.GEMINI_MODEL ? [] : await availableModels(env);
+  const queue = [env.GEMINI_MODEL || workingModel || listed[0] || DEFAULT_MODEL, ...listed];
+  const tried = [], notes = [];
+  let model, res = null, data = null, triedList = Boolean(listed.length);
+
+  while (queue.length && tried.length < 4) {
+    const left = BUDGET_MS - (Date.now() - started);
+    if (left < 8_000) break;
+    model = queue.shift();
+    if (tried.includes(model)) continue;
+    tried.push(model);
+    try {
+      res = await callGemini(env, model, parts, wantJson, Math.min(PER_MODEL_MS, left));
       data = await res.json().catch(() => null);
-      if (res.ok) break;
-      if (res.status === 503 || res.status === 500) { // overloaded: one quick retry on the same model
-        await new Promise((r) => setTimeout(r, 1500));
-        res = await callGemini(env, model, parts, wantJson);
-        data = await res.json().catch(() => null);
-        if (res.ok) break;
-      }
-      if (busy(res.status) || notFound(res.status, data)) {
-        if (!listed) { listed = true; for (const m of await availableModels(env)) if (!tried.includes(m)) queue.push(m); }
-        continue;
-      }
-      break; // bad key, bad request, etc: another model will not help
+    } catch (e) {
+      const timedOut = e && (e.name === 'TimeoutError' || e.name === 'AbortError');
+      notes.push(`${model}: ${timedOut ? 'no answer in ' + Math.round(Math.min(PER_MODEL_MS, left) / 1000) + 's' : 'network error'}`);
+      res = null; data = null; continue;
     }
-    if (res && res.ok) workingModel = env.GEMINI_MODEL ? null : model;
-  } catch (e) {
-    const timedOut = e && (e.name === 'TimeoutError' || e.name === 'AbortError');
-    return out({ error: timedOut ? 'timeout' : 'network', model, detail: timedOut ? `Gemini did not answer within ${GEMINI_TIMEOUT_MS / 1000}s` : String(e && e.message || e).slice(0, 200) }, 504);
+    if (res.ok) break;
+    notes.push(`${model}: HTTP ${res.status}`);
+    if (slow(res.status) || notFound(res.status, data)) {
+      if (!triedList && !env.GEMINI_MODEL) { triedList = true; for (const m of await availableModels(env)) if (!tried.includes(m)) queue.push(m); }
+      continue;
+    }
+    break; // bad key, bad request and the like: another model will not help
+  }
+  if (res && res.ok) workingModel = env.GEMINI_MODEL ? null : model;
+
+  if (!res) {
+    return out({ error: 'timeout', model, detail: `No model answered in time (${notes.join('; ')})` }, 504);
   }
 
   if (!res.ok) {
-    const detail = String((data && data.error && data.error.message) || '').slice(0, 300) + (tried.length > 1 ? ` (tried ${tried.join(', ')})` : '');
+    const detail = (String((data && data.error && data.error.message) || '').slice(0, 240) + (notes.length > 1 ? ` (tried: ${notes.join('; ')})` : '')).trim();
     const info = { detail, status: res.status, model };
     if (res.status === 429) return out({ error: 'rate_limited', ...info }, 429);
     if (res.status === 400 || res.status === 403) return out({ error: 'upstream_rejected', ...info }, 502);
