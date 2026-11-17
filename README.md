@@ -3,7 +3,7 @@
 **reachloop** is a personal Instagram helper for a photographer reviving their account. It helps you post good work consistently, learn from your own numbers, and get better reach without turning into a marketer.
 
 It runs in two places from the same file:
-- **As an installable phone app** (PWA, hosted on Cloudflare Pages): works offline, keeps everything on your device, shares slides and reels straight to Instagram, and receives photos shared from your gallery on Android.
+- **As an installable phone app** (PWA, hosted on Cloudflare Pages): works offline, keeps everything on your device, shares slides and reels straight to Instagram, receives photos shared from your gallery on Android, and runs the AI features through Gemini once you add your passcode in Profile.
 - **Inside Claude** (a Claude artifact): syncs between devices and adds the Claude features (captions, reach check, reel ideas, shot lists).
 
 ## What it does
@@ -56,11 +56,13 @@ It runs in two places from the same file:
 | `sample` (with images) | Captions, reach checks, reel ideas, shot lists, place names, learnings |
 | `downloads` | Saving slides and MP4s |
 
-Outside Claude the Claude features are hidden.
+**AI in the phone app** goes through `functions/api/ai.js`, a Cloudflare Pages Function that calls the Gemini API. The key lives only in Cloudflare; the app sends a passcode you choose with each request. Until a passcode is entered, the AI features are hidden.
 
 ## Deploy
 
-Cloudflare Pages, connected to this repo: production branch `main`, framework preset None, build command empty, build output directory `public`. Every push to `main` deploys. After changing anything in `public/`, bump `VERSION` in `public/sw.js` so installed apps refresh.
+Cloudflare Pages, connected to this repo: production branch `main`, framework preset None, build command empty, build output directory `public`. Every push to `main` deploys, including `functions/`.
+
+Secrets (Settings → Variables and Secrets, Production): `GEMINI_API_KEY` and `APP_PASSCODE`; optionally `GEMINI_MODEL` to pin a model (default `gemini-flash-latest`). Redeploy after adding them. After changing anything in `public/`, bump `VERSION` in `public/sw.js` so installed apps refresh.
 
 External code: [`mp4-muxer`](https://github.com/Vanilagy/mp4-muxer) 5.2.2 from jsDelivr for MP4 export (WebCodecs, with a MediaRecorder fallback), and Google Fonts (Outfit, Manrope, JetBrains Mono).
 
@@ -74,5 +76,5 @@ External code: [`mp4-muxer`](https://github.com/Vanilagy/mp4-muxer) 5.2.2 from j
 ## Roadmap
 
 1. ~~Installable web app (PWA): manifest, offline shell, home-screen icon~~ (done); push reminders at posting times
-2. Own backend: Anthropic API for the Claude features, a database for sync, image storage
+2. ~~AI in the phone app~~ (done, via Gemini); sync between devices and image storage
 3. Instagram Graph API: pull Insights automatically; optionally publish posts

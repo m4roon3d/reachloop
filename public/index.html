@@ -257,11 +257,16 @@ const pad2=n=>String(n).padStart(2,'0');
 const fmtDT=ts=>{const d=new Date(ts);return `${DAYS[d.getDay()]} ${d.getDate()} ${d.toLocaleString('en',{month:'short'})} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`};
 const toLocalInput=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`};
 let toastT;
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
+function toast(msg){
+  // an AI call rejected for a wrong passcode or missing setup says so, whatever the caller's generic message
+  if(S&&Date.now()-(S.authFailAt||0)<3000) msg='Your AI passcode was not accepted. Update it in Profile → AI writing.';
+  else if(S&&Date.now()-(S.notConfiguredAt||0)<3000) msg='AI is not set up on the server yet. Add the Gemini key and passcode in Cloudflare.';
+  const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
 
 const DEFAULT_SETTINGS={handle:'',niche:'',city:'',voice:'Storyteller',signature:'',language:'English',tagBank:'',gearLine:true,goal:4,
   slots:{0:['10:00','18:30'],1:['08:00','19:30'],2:['08:00','13:00','19:30'],3:['08:00','19:30'],4:['08:00','13:00','19:30'],5:['08:00','20:00'],6:['10:00','18:30']}};
 
+let AI='Claude';
 const S={db:null,col:null,uid:null,assets:null,sample:null,dl:null,mode:'loading',
   posts:new Map(),shots:new Map(),settings:JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
   view:'create',draft:null,selImg:0,reorder:false,sel:null,showGridMask:true,aiBusy:false,aiCtl:null,videos:{}};
@@ -564,7 +569,7 @@ async function boot(){
 }
 function applySettings(o){ S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...o,slots:{...DEFAULT_SETTINGS.slots,...((o&&o.slots)||{})}} }
 async function startLocal(){
-  S.mode='local'; S.web=!(window.claude&&window.claude.use); setSync('local');
+  S.mode='local'; S.web=!(window.claude&&window.claude.use); setSync('local'); enableWebAI();
   let legacy=null; try{ const raw=localStorage.getItem('contactsheet_v1'); if(raw) legacy=JSON.parse(raw) }catch(_){}
   try{
     await IDB.open();
@@ -654,7 +659,7 @@ function renderEditor(m){
     </div>
     <div class="ed-right stack">
       <div class="card stack">
-        <label class="f" for="notes">The story behind it <span class="hint">Where, when, what caught your eye. Claude uses this; the more specific, the better the caption.</span>
+        <label class="f" for="notes">The story behind it <span class="hint">Where, when, what caught your eye. ${AI} uses this; the more specific, the better the caption.</span>
           <textarea id="notes" rows="3" placeholder="e.g. Golden hour at the Basavanagudi flower market, the vendor laughed when I asked to shoot her marigolds">${esc(p.notes)}</textarea></label>
         <label class="f" for="loc">Location tag <input type="text" id="loc" value="${esc(p.location)}" placeholder="e.g. KR Market, Bengaluru"></label>
         <div id="locHelp"></div>
@@ -664,7 +669,7 @@ function renderEditor(m){
       <div class="card stack" id="copyCard">
         <div id="hooksBox"></div>
         <label class="f" for="cap">Caption <span class="hint">Line one is your hook: about the first 125 characters show before "more".</span>
-          <textarea id="cap" rows="8" placeholder="Write it yourself or let Claude draft it">${esc(p.caption)}</textarea></label>
+          <textarea id="cap" rows="8" placeholder="Write it yourself or let ${AI} draft it">${esc(p.caption)}</textarea></label>
         <div class="row" style="justify-content:space-between"><span class="count" id="capCount"></span><span class="count" id="hookCount"></span></div>
         <div class="stack" style="gap:5px"><div class="row" style="justify-content:space-between"><h3>Hashtags</h3><span class="count" id="tagCount"></span></div>
           <div class="tags" id="tags"></div>
@@ -717,9 +722,9 @@ function paintLoc(){
   b.innerHTML=`<div class="stack" style="gap:6px">
     <div class="row small" style="gap:8px"><span class="mono">📍 ${g.lat.toFixed(5)}, ${g.lon.toFixed(5)}</span><a href="${maps}" target="_blank" rel="noopener">Check on map ↗</a></div>
     ${near?`<div class="small">Matches your saved place <strong>${esc(near.name)}</strong> (${Math.round(near.d)} m away).${p.location!==near.name?` <button class="btn sm" id="useNear">Use it</button>`:''}</div>`:''}
-    ${S.locGuess&&S.locGuess.pid===p.id?`<div class="small">Claude's guess: <strong>${esc(S.locGuess.name)}</strong> <span class="pill ${S.locGuess.confidence==='high'?'posted':'scheduled'}">${esc(S.locGuess.confidence||'medium')} confidence</span>${S.locGuess.note?` <span class="muted">${esc(S.locGuess.note)}</span>`:''}<br><span class="muted">Check it on the map before posting.</span></div>`:''}
+    ${S.locGuess&&S.locGuess.pid===p.id?`<div class="small">${AI}'s guess: <strong>${esc(S.locGuess.name)}</strong> <span class="pill ${S.locGuess.confidence==='high'?'posted':'scheduled'}">${esc(S.locGuess.confidence||'medium')} confidence</span>${S.locGuess.note?` <span class="muted">${esc(S.locGuess.note)}</span>`:''}<br><span class="muted">Check it on the map before posting.</span></div>`:''}
     <div class="row">
-      ${!near&&S.sample?`<button class="btn sm" id="guessLoc" ${S.locBusy?'disabled':''}>${S.locBusy?'Asking…':'Suggest a name with Claude'}</button>`:''}
+      ${!near&&S.sample?`<button class="btn sm" id="guessLoc" ${S.locBusy?'disabled':''}>${S.locBusy?'Asking…':`Suggest a name with ${AI}`}</button>`:''}
       ${typedName&&!known?`<button class="btn sm" id="savePlace">Save "${esc(typedName.length>28?typedName.slice(0,28)+'…':typedName)}" as a place</button>`:''}
     </div>
     ${!near&&!typedName?`<p class="muted small" style="margin:0">Type the place name above and save it. Next time you shoot within 300 m, it fills in by itself.</p>`:''}
@@ -737,7 +742,7 @@ Reply with only JSON: {"name":"","confidence":"high|medium|low","note":"short re
     if(!r||!r.name) throw {code:'invalid_json'};
     S.locGuess={pid:p.id,name:String(r.name),confidence:String(r.confidence||'medium'),note:String(r.note||'')};
     if(!p.location){ p.location=S.locGuess.name; p.locSource='guess'; $('#loc').value=p.location; touch() }
-  }catch(e){ toast({rate_limited:'Claude is busy or your usage limit was reached.'}[e&&e.code]||'Could not suggest a name. Type it instead.') }
+  }catch(e){ toast({rate_limited:`${AI} is busy or your usage limit was reached.`}[e&&e.code]||'Could not suggest a name. Type it instead.') }
   S.locBusy=false; paintLoc(); paintReach();
 }
 function statusPill(p){
@@ -888,10 +893,10 @@ function paintExif(){
 }
 function refreshAICard(){
   const b=$('#aiCard'); if(!b) return; const p=D();
-  if(S.aiBusy){ b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span><span id="aiMsg">Claude is looking at your ${p.images.length>1?'photos':'photo'}…</span></div><button class="btn sm" id="aiStop">Stop</button></div>`; $('#aiStop').onclick=()=>S.aiCtl?.abort(); return }
-  if(!S.sample){ b.innerHTML=S.mode==='loading'?'':`<p class="muted small" style="margin:0">Claude drafting is available when this page is opened inside Claude. You can still write captions here and use the quick draft.</p><button class="btn" id="tplBtn" ${p.images.length?'':'disabled'}>Quick draft from notes</button>`; $('#tplBtn')&&($('#tplBtn').onclick=templateDraft); return }
+  if(S.aiBusy){ b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span><span id="aiMsg">${AI} is looking at your ${p.images.length>1?'photos':'photo'}…</span></div><button class="btn sm" id="aiStop">Stop</button></div>`; $('#aiStop').onclick=()=>S.aiCtl?.abort(); return }
+  if(!S.sample){ b.innerHTML=S.mode==='loading'?'':`<p class="muted small" style="margin:0">${S.web?'AI writing is off. Add your passcode in Profile → AI writing to turn it on.':'Claude drafting is available when this page is opened inside Claude.'} You can still write captions here and use the quick draft.</p><button class="btn" id="tplBtn" ${p.images.length?'':'disabled'}>Quick draft from notes</button>`; $('#tplBtn')&&($('#tplBtn').onclick=templateDraft); return }
   const has=!!(p.caption||p.tags.length);
-  b.innerHTML=`<div class="row"><button class="btn primary" id="aiBtn" ${p.images.length?'':'disabled'}>${has?'Rewrite with Claude':'Write caption with Claude'}</button>
+  b.innerHTML=`<div class="row"><button class="btn primary" id="aiBtn" ${p.images.length?'':'disabled'}>${has?`Rewrite with ${AI}`:`Write caption with ${AI}`}</button>
     <span class="muted small">${p.images.length?`Reads the ${p.images.length>1?'slides':'photo'}, your notes and camera data${p.format==='reel'?'; plans the reel':''}.`:'Add a photo first.'}</span></div>`;
   $('#aiBtn').onclick=runAI;
 }
@@ -1066,8 +1071,8 @@ function paintReach(){
   b.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Reach check</h3>
       <div class="rsum"><span class="pill posted">${cnt('strong')} strong</span><span class="pill scheduled">${cnt('ok')} could improve</span>${cnt('weak')?`<span class="pill due">${cnt('weak')} weak</span>`:''}</div></div>
     <p class="muted small" style="margin:0">Not a virality score. It checks the post against what Instagram says it ranks on: watch time, sends (DM shares), saves and likes per reach.</p>
-    ${S.reachBusy?`<div class="aiwait"><span class="spin"></span>Claude is reviewing the post…</div>`
-      :S.sample?`<div class="row"><button class="btn ${rc?'':'primary'}" id="rcBtn">${rc?'Check again with Claude':'Review with Claude'}</button>${stale?'<span class="small" style="color:var(--amber)">Post changed since the last review.</span>':''}</div>`:''}
+    ${S.reachBusy?`<div class="aiwait"><span class="spin"></span>${AI} is reviewing the post…</div>`
+      :S.sample?`<div class="row"><button class="btn ${rc?'':'primary'}" id="rcBtn">${rc?`Check again with ${AI}`:`Review with ${AI}`}</button>${stale?'<span class="small" style="color:var(--amber)">Post changed since the last review.</span>':''}</div>`:''}
     ${rc&&rc.verdict?`<div class="tip">${esc(rc.verdict)}</div>`:''}
     ${rc&&rc.trialReel&&p.format==='reel'?`<div class="small"><strong>Trial Reel?</strong> ${esc(rc.trialReel)}</div>`:''}
     ${ai.length?`<div>${ai.map(rcRow).join('')}</div>`:''}
@@ -1122,7 +1127,7 @@ Reply with only JSON:
       checks:r.checks.slice(0,9).map(c=>({area:String(c.area||''),signal:String(c.signal||''),rating:String(c.rating||'ok'),note:String(c.note||''),fix:String(c.fix||''),apply:c.apply&&typeof c.apply==='object'&&c.apply.field?{field:String(c.apply.field),value:c.apply.value}:null}))};
     savePost(p);
   }catch(e){
-    const msg={not_granted:'Claude was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached.',invalid_json:'The review came back garbled. Try again.'}[e&&e.code];
+    const msg={not_granted:`${AI} was not allowed for this page.`,rate_limited:`${AI} is busy or your usage limit was reached.`,invalid_json:'The review came back garbled. Try again.'}[e&&e.code];
     toast(msg||'Something went wrong. Try again.');
     if(e&&['not_granted','sampling_disabled'].includes(e.code)) S.sample=null;
   }
@@ -1230,7 +1235,7 @@ async function runAI(){
     S.aiBusy=false; renderEditor($('#main')); toast('Draft ready. Make it yours.');
     return;
   }catch(e){
-    const msg={cancelled:'',not_granted:'Claude drafting was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached. Try again in a bit.',invalid_json:'The draft came back garbled. Try again.',image_rejected:'One of the images could not be sent. Try fewer slides.',refused:'Claude could not write a caption for this one.',session_expired:'Sign in to Claude again, then retry.'}[e&&e.code];
+    const msg={cancelled:'',not_granted:`${AI} drafting was not allowed for this page.`,rate_limited:`${AI} is busy or your usage limit was reached. Try again in a bit.`,invalid_json:'The draft came back garbled. Try again.',image_rejected:'One of the images could not be sent. Try fewer slides.',refused:`${AI} could not write a caption for this one.`,session_expired:`Sign in to ${AI} again, then retry.`}[e&&e.code];
     if(msg!=='') toast(msg||'Something went wrong. Try again.');
     if(e&&['not_granted','sampling_disabled','capability_disabled','capability_removed','not_declared'].includes(e.code)) S.sample=null;
   }
@@ -1386,13 +1391,13 @@ function resultsSection(all){
       ${logged.map((x,i)=>`<tr class="${i<3&&logged.length>=4?'top':''}"><td><div class="pc"><img data-th="${x.p.id}" alt=""><span>${fmtName(x.p)}<br><span class="muted">${new Date(x.p.postedAt).toLocaleDateString('en',{day:'numeric',month:'short'})}</span></span></div></td><td>${x.r.base.toLocaleString('en-IN')}</td><td>${fmtPc(x.r.sends)}</td><td>${fmtPc(x.r.saves)}</td><td>${fmtPc(x.r.likes)}</td><td>${fmtPc(x.r.follows)}</td><td>${x.r.watch!=null?x.r.watch+'s':'–'}</td><td><button class="btn sm ghost" data-rlog="${x.p.id}">Edit</button></td></tr>
       ${S.openResult===x.p.id?`<tr><td colspan="8" style="text-align:left;font-family:var(--body)">${resultsForm(x.p)}</td></tr>`:''}`).join('')}
     </tbody></table></div><p class="muted small" style="margin:0">Rates are per account reached, sorted by sends then saves. Green rows are your top three.</p>`:`<p class="muted small" style="margin:0">After you mark posts as posted, they show up here for their numbers two days later.</p>`}
-    ${L&&L.patterns?`<div class="stack" style="gap:8px;margin-top:4px"><h3>What Claude sees in your numbers <span class="mono" style="text-transform:none;letter-spacing:0">· ${L.n} posts · ${new Date(L.at).toLocaleDateString('en',{day:'numeric',month:'short'})}</span></h3>
+    ${L&&L.patterns?`<div class="stack" style="gap:8px;margin-top:4px"><h3>What ${AI} sees in your numbers <span class="mono" style="text-transform:none;letter-spacing:0">· ${L.n} posts · ${new Date(L.at).toLocaleDateString('en',{day:'numeric',month:'short'})}</span></h3>
       ${L.headline?`<div class="tip">${esc(L.headline)}</div>`:''}
       ${L.patterns.map(x=>`<div class="small"><strong>${esc(x.finding)}</strong>${x.evidence?` <span class="muted">${esc(x.evidence)}</span>`:''}<br>→ ${esc(x.action)}</div>`).join('')}
       ${L.tryNext&&L.tryNext.length?`<div class="small"><strong>Try next:</strong><ul style="margin:4px 0 0;padding-left:20px">${L.tryNext.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`:''}
       ${L.caution?`<p class="muted small" style="margin:0">${esc(L.caution)}</p>`:''}
       <p class="muted small" style="margin:0">Captions and reach checks now use these findings.</p></div>`:''}
-    ${S.sample&&logged.length>=3?`<div class="row"><button class="btn ${L?'':'primary'}" id="learnBtn" ${S.learnBusy?'disabled':''}>${S.learnBusy?'Reading your numbers…':L?'Update findings':'Ask Claude what\'s working'}</button>${logged.length<8?`<span class="muted small">Patterns firm up after about 8 posts.</span>`:''}</div>`:logged.length&&logged.length<3?`<p class="muted small" style="margin:0">Log ${3-logged.length} more to ask Claude for patterns.</p>`:''}
+    ${S.sample&&logged.length>=3?`<div class="row"><button class="btn ${L?'':'primary'}" id="learnBtn" ${S.learnBusy?'disabled':''}>${S.learnBusy?'Reading your numbers…':L?'Update findings':`Ask ${AI} what’s working`}</button>${logged.length<8?`<span class="muted small">Patterns firm up after about 8 posts.</span>`:''}</div>`:logged.length&&logged.length<3?`<p class="muted small" style="margin:0">Log ${3-logged.length} more to ask ${AI} for patterns.</p>`:''}
   </div>`;
 }
 async function runLearnings(m){
@@ -1415,7 +1420,7 @@ Give 2 to 4 patterns.`;
     if(!r||!Array.isArray(r.patterns)) throw {code:'invalid_json'};
     S.settings.learnings={at:Date.now(),n:rows.length,headline:String(r.headline||''),patterns:r.patterns.slice(0,5).map(x=>({finding:String(x.finding||''),evidence:String(x.evidence||''),action:String(x.action||'')})),tryNext:(r.tryNext||[]).map(String).slice(0,4),caution:String(r.caution||'')};
     saveSettings();
-  }catch(e){ toast({rate_limited:'Claude is busy or your usage limit was reached.',invalid_json:'That came back garbled. Try again.'}[e&&e.code]||'Something went wrong. Try again.') }
+  }catch(e){ toast({rate_limited:`${AI} is busy or your usage limit was reached.`,invalid_json:'That came back garbled. Try again.'}[e&&e.code]||'Something went wrong. Try again.') }
   S.learnBusy=false; if(S.view==='plan') renderPlan(m);
 }
 function qItem(p,queued){
@@ -1584,9 +1589,9 @@ function paintRStrip(){
 }
 function paintIdeaCtl(){
   const p=D(), b=$('#ideaCtl'); if(!b) return;
-  if(S.ideasBusy){ b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span>Claude is studying your frames…</div><button class="btn sm" id="iStop">Stop</button></div>`; $('#iStop').onclick=()=>S.ideasCtl?.abort(); return }
-  if(!S.sample){ b.innerHTML=`<p class="muted small" style="margin:0">Reel ideas need this page open inside Claude. The builder on the right works anywhere.</p>`; return }
-  b.innerHTML=`<label class="f" for="iNotes">Anything Claude should know? <span class="hint">The mood you're after, what happened, a song you like.</span><input type="text" id="iNotes" value="${esc(p.reelNotes||'')}" placeholder="e.g. quiet early morning, want it calm not hype"></label>
+  if(S.ideasBusy){ b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span>${AI} is studying your frames…</div><button class="btn sm" id="iStop">Stop</button></div>`; $('#iStop').onclick=()=>S.ideasCtl?.abort(); return }
+  if(!S.sample){ b.innerHTML=`<p class="muted small" style="margin:0">${S.web?'Reel ideas need AI writing: add your passcode in Profile.':'Reel ideas need this page open inside Claude.'} The builder on the right works anywhere.</p>`; return }
+  b.innerHTML=`<label class="f" for="iNotes">Anything ${AI} should know? <span class="hint">The mood you're after, what happened, a song you like.</span><input type="text" id="iNotes" value="${esc(p.reelNotes||'')}" placeholder="e.g. quiet early morning, want it calm not hype"></label>
     <div class="row"><button class="btn primary" id="ideasBtn" ${p.images.length?'':'disabled'}>${p.reelIdeas?.length?'3 fresh ideas':'Give me 3 reel ideas'}</button><span class="muted small">${p.images.length?'At least two will be ready to build from these photos.':'Add photos first.'}</span></div>`;
   $('#iNotes').oninput=e=>{p.reelNotes=e.target.value;touch()};
   $('#ideasBtn').onclick=runIdeas;
@@ -1630,7 +1635,7 @@ async function runIdeas(){
     if(!cs.length) throw {code:'invalid_json'};
     p.reelIdeas=cs; savePost(p); toast('3 ideas ready');
   }catch(e){
-    const msg={cancelled:'',not_granted:'Claude was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached. Try again in a bit.',invalid_json:'The ideas came back garbled. Try again.',image_rejected:'An image could not be sent. Try fewer slides.'}[e&&e.code];
+    const msg={cancelled:'',not_granted:`${AI} was not allowed for this page.`,rate_limited:`${AI} is busy or your usage limit was reached. Try again in a bit.`,invalid_json:'The ideas came back garbled. Try again.',image_rejected:'An image could not be sent. Try fewer slides.'}[e&&e.code];
     if(msg!=='') toast(msg||'Something went wrong. Try again.');
     if(e&&['not_granted','sampling_disabled','capability_disabled','capability_removed','not_declared'].includes(e.code)) S.sample=null;
   }
@@ -1756,7 +1761,7 @@ function paintShots(){
     <label class="f" for="slWhen">When and how long <input type="text" id="slWhen" value="${esc(f.when||'')}" placeholder="e.g. Saturday 6:30am, about 2 hours"></label>
     <label class="f" for="slWhat">What you're hoping to capture <input type="text" id="slWhat" value="${esc(f.what||'')}" placeholder="e.g. flower sellers, morning light, the chaos"></label>
     <label class="f" for="slGear">Gear <span class="hint">Optional</span><input type="text" id="slGear" value="${esc(f.gear||'')}" placeholder="e.g. X-T5 with 23mm, phone for BTS"></label>
-    <div class="row">${S.sample?`<button class="btn primary" id="slGo" ${S.shotBusy?'disabled':''}>${S.shotBusy?'Planning…':'Make shot list'}</button>`:`<span class="muted small">Shot lists need this page open inside Claude.</span>`}${S.shotBusy?'<span class="spin"></span>':''}</div>
+    <div class="row">${S.sample?`<button class="btn primary" id="slGo" ${S.shotBusy?'disabled':''}>${S.shotBusy?'Planning…':'Make shot list'}</button>`:`<span class="muted small">${S.web?'Shot lists need AI writing: add your passcode in Profile.':'Shot lists need this page open inside Claude.'}</span>`}${S.shotBusy?'<span class="spin"></span>':''}</div>
     <div class="stack" id="slList">${list.map(shotCard).join('')}</div>`;
   ['where','when','what','gear'].forEach(k=>{const el=$('#sl'+k[0].toUpperCase()+k.slice(1)); el.oninput=()=>{S.shotForm={...(S.shotForm||{}),[k]:el.value}}});
   $('#slGo')&&($('#slGo').onclick=runShotList);
@@ -1805,7 +1810,7 @@ Reply with only JSON:
       stills:(r.stills||[]).map(String).slice(0,8),reels:(r.reels||[]).slice(0,3).map(x=>({name:String(x.name||''),uses:String(x.uses||'')})),sound:String(r.sound||''),tips:(r.tips||[]).map(String).slice(0,4),done:{}};
     saveShot(doc); S.openShot=doc.id; S.shotForm={}; toast('Shot list ready');
   }catch(e){
-    const msg={not_granted:'Claude was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached.',invalid_json:'The plan came back garbled. Try again.'}[e&&e.code];
+    const msg={not_granted:`${AI} was not allowed for this page.`,rate_limited:`${AI} is busy or your usage limit was reached.`,invalid_json:'The plan came back garbled. Try again.'}[e&&e.code];
     toast(msg||'Something went wrong. Try again.');
     if(e&&['not_granted','sampling_disabled'].includes(e.code)) S.sample=null;
   }
@@ -1815,7 +1820,7 @@ Reply with only JSON:
 /* ---------- profile view ---------- */
 function renderProfile(m){
   const s=S.settings;
-  m.innerHTML=`${localBanner()}<div class="view-head"><div><h2>Profile & voice</h2><p class="muted small">Claude uses these on every caption so they sound like you.</p></div></div>
+  m.innerHTML=`${localBanner()}<div class="view-head"><div><h2>Profile & voice</h2><p class="muted small">${AI} uses these on every caption so they sound like you.</p></div></div>
   <div class="two">
     <div class="card stack">
       <label class="f" for="pHandle">Instagram handle <input type="text" id="pHandle" value="${esc(s.handle)}" placeholder="without @"></label>
@@ -1842,6 +1847,7 @@ function renderProfile(m){
     <div id="backupOut"></div>
   </div>`:''}`;
   if(S.mode==='local') bindDeviceCard(m);
+  if(S.web){ m.insertAdjacentHTML('beforeend',aiCardHTML()); bindAICard(m) }
   const bind=(id,k,ev='input')=>$('#'+id).addEventListener(ev,e=>{s[k]=e.target.type==='checkbox'?e.target.checked:e.target.value; if(k==='handle') s.handle=s.handle.replace(/^@/,'').trim(); saveSettings()});
   bind('pHandle','handle'); bind('pNiche','niche'); bind('pCity','city'); bind('pFol','followers');
   $('#placeList').onclick=e=>{const d=e.target.closest('[data-delpl]'); if(!d) return; s.places=(s.places||[]).filter((_,i)=>i!==+d.dataset.delpl); saveSettings(); renderProfile(m)}; bind('pVoice','voice','change'); bind('pLang','language'); bind('pSig','signature'); bind('pBank','tagBank'); bind('pGear','gearLine','change');
@@ -1889,6 +1895,71 @@ function bindDeviceCard(m){
     if(o.settings){ const places=[...(S.settings.places||[])]; for(const pl of o.settings.places||[]) if(!places.some(q=>q.name===pl.name)) places.push(pl); applySettings({...o.settings,places,lastBackup:S.settings.lastBackup}); saveSettings() }
     thumbCache.clear(); render(); toast(`Restored: ${added} new post${added===1?'':'s'}, ${updated} updated`);
   };
+}
+
+/* ---------- AI writing in the installed app: same interface as Claude's sample, served by /api/ai ---------- */
+const PASS_KEY='reachloop_ai_pass';
+function getPass(){ try{ return localStorage.getItem(PASS_KEY)||'' }catch(_){ return '' } }
+function setPass(v){ try{ v?localStorage.setItem(PASS_KEY,v):localStorage.removeItem(PASS_KEY) }catch(_){} }
+const b64=blob=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(',')[1]||'');f.onerror=()=>rej(f.error);f.readAsDataURL(blob)});
+function parseLooseJSON(t){
+  try{ return JSON.parse(t) }catch(_){}
+  const fence=/```(?:json)?\s*([\s\S]*?)```/.exec(t); if(fence){ try{ return JSON.parse(fence[1]) }catch(_){} }
+  const a=t.search(/[\[{]/), z=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));
+  if(a>=0&&z>a){ try{ return JSON.parse(t.slice(a,z+1)) }catch(_){} }
+  throw {code:'invalid_json',text:t};
+}
+async function aiCall(prompt,opts={},wantJson=false){
+  const images=opts.images?await Promise.all([].concat(opts.images).filter(Boolean).slice(0,12).map(b64)):[];
+  let r;
+  try{
+    r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json','x-passcode':getPass()},body:JSON.stringify({prompt:typeof prompt==='string'?prompt:prompt.map(m=>m.content).join('\n\n'),images,json:wantJson}),signal:opts.signal});
+  }catch(e){ throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error',message:'network'} }
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401){ S.authFailAt=Date.now(); throw {code:'bad_passcode'} }
+  if(r.status===503){ S.notConfiguredAt=Date.now(); throw {code:'not_configured'} }
+  if(r.status===429) throw {code:'rate_limited'};
+  if(r.status===422) throw {code:'refused'};
+  if(!r.ok||!d.text) throw {code:'upstream_error',message:d.detail||d.error||''};
+  if(opts.onText) try{ opts.onText({text:d.text,delta:d.text}) }catch(_){}
+  return d;
+}
+function makeWebSample(){
+  const f=async(prompt,opts)=>{ const d=await aiCall(prompt,opts,false); return {text:d.text,truncated:!!d.truncated,modelTierApplied:'default'} };
+  f.json=async(prompt,opts)=>parseLooseJSON((await aiCall(prompt,opts,true)).text);
+  f.limits=async()=>({maxPromptBytes:200000,images:{maxCount:12,maxInputBytes:20e6,mediaTypes:['image/jpeg']}});
+  return f;
+}
+function enableWebAI(){ if(S.web&&getPass()){ S.sample=makeWebSample(); AI='AI' } }
+async function testWebAI(pass){
+  try{
+    const r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json','x-passcode':pass},body:JSON.stringify({ping:true})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok) return {ok:true,model:d.model};
+    return {ok:false,why:r.status===401?'That passcode is not right.':r.status===503?'AI is not set up on the server yet: add GEMINI_API_KEY and APP_PASSCODE in Cloudflare.':r.status===404?'The AI function is not deployed yet.':'The AI service did not answer.'};
+  }catch(_){ return {ok:false,why:'No connection. Check your internet and try again.'} }
+}
+function aiCardHTML(){
+  const on=!!(S.sample&&getPass());
+  return `<div class="card stack" style="margin-top:16px" id="aiSetup">
+    <div class="row" style="justify-content:space-between"><h3>AI writing</h3>${on?'<span class="pill posted">On</span>':'<span class="pill">Off</span>'}</div>
+    <p class="small" style="margin:0">Captions, hashtags, reach checks, reel ideas, shot lists and place names. Your Gemini key stays on the server; this device only keeps your passcode.</p>
+    <div class="row"><input type="password" id="aiPass" autocomplete="current-password" placeholder="Your reachloop passcode" value="${on?'••••••••':''}" style="max-width:260px" aria-label="AI passcode">
+      <button class="btn ${on?'':'primary'}" id="aiPassSave">${on?'Change':'Turn on'}</button>${on?'<button class="btn ghost sm" id="aiPassOff">Turn off</button>':''}</div>
+    <p class="small muted" style="margin:0" id="aiPassMsg"></p>
+  </div>`;
+}
+function bindAICard(m){
+  const inp=$('#aiPass'); if(!inp) return;
+  inp.onfocus=()=>{ if(inp.value==='••••••••') inp.value='' };
+  $('#aiPassSave').onclick=async()=>{
+    const v=inp.value.trim(); if(!v||v==='••••••••'){ $('#aiPassMsg').textContent='Type your passcode first.'; return }
+    $('#aiPassMsg').textContent='Checking…';
+    const t=await testWebAI(v);
+    if(t.ok){ setPass(v); enableWebAI(); toast('AI writing is on'); renderProfile(m) }
+    else $('#aiPassMsg').textContent=t.why;
+  };
+  $('#aiPassOff')&&($('#aiPassOff').onclick=()=>{ setPass(''); S.sample=null; toast('AI writing is off'); renderProfile(m) });
 }
 
 /* ---------- photos shared into the app from the gallery (Android) ---------- */
