@@ -1944,6 +1944,7 @@ async function aiCall(prompt,opts={},wantJson=false){
     if(r.status===401){ S.authFailAt=Date.now(); throw fail('bad_passcode','bad_passcode · HTTP 401') }
     if(r.status===503&&d.error==='not_configured'){ S.notConfiguredAt=Date.now(); throw fail('not_configured','not_configured · HTTP 503') }
     const why=[d.error,d.status?('HTTP '+d.status):('HTTP '+st),d.model?('model '+d.model):'',d.detail||(!d.error&&raw?raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,160):'')].filter(Boolean).join(' · ');
+    if(/high demand|overloaded|UNAVAILABLE|try again later/i.test(why)) throw fail('upstream_error','Gemini is overloaded right now. Try again in a minute · '+why);
     if(st===429) throw fail('rate_limited',why);
     if(st===422) throw fail('refused',why);
     if(st>=300||!d.text) throw fail('upstream_error',why);

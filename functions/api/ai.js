@@ -46,22 +46,24 @@ async function callGemini(env, model, parts, wantJson) {
   return res;
 }
 
-// If the default model name is not available to this key, ask Google which Flash models it can use.
-let pickedModel = null;
-async function pickAvailableModel(env) {
-  if (pickedModel) return pickedModel;
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': env.GEMINI_API_KEY } });
-  if (!r.ok) return null;
+// Models this key can use, newest Flash first and Flash-Lite after (cached per server instance).
+let modelList = null;
+async function availableModels(env) {
+  if (modelList) return modelList;
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': env.GEMINI_API_KEY } }).catch(() => null);
+  if (!r || !r.ok) return [];
   const d = await r.json().catch(() => ({}));
   const names = (d.models || [])
     .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
     .map((m) => String(m.name || '').replace(/^models\//, ''))
-    .filter((n) => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding|robotics|preview|exp)/.test(n));
+    .filter((n) => /flash/.test(n) && !/(tts|image|live|audio|embedding|robotics|preview|exp|latest)/.test(n));
   const ver = (n) => (n.match(/(\d+(?:\.\d+)?)/) || [0, 0])[1] * 1;
-  names.sort((a, b) => ver(b) - ver(a) || a.length - b.length);
-  pickedModel = names[0] || null;
-  return pickedModel;
+  const lite = (n) => (/lite/.test(n) ? 1 : 0);
+  names.sort((a, b) => lite(a) - lite(b) || ver(b) - ver(a) || a.length - b.length);
+  modelList = names;
+  return modelList;
 }
+let workingModel = null; // last model that answered, tried first next time
 const notFound = (status, data) => status === 404 || (status === 400 && /not (found|supported)|unknown model|is not available/i.test(String((data && data.error && data.error.message) || '')));
 
 export async function onRequestGet({ env }) {
@@ -111,22 +113,39 @@ async function generate(env, body) {
   const parts = [...images.map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })), { text: prompt }];
 
   const started = Date.now();
-  let model = env.GEMINI_MODEL || pickedModel || DEFAULT_MODEL;
-  let res, data;
+  const wantJson = Boolean(body.json);
+  const busy = (st) => st === 503 || st === 500 || st === 429;
+  const queue = [env.GEMINI_MODEL || workingModel || DEFAULT_MODEL];
+  const tried = [];
+  let model, res, data, listed = false;
   try {
-    res = await callGemini(env, model, parts, Boolean(body.json));
-    data = await res.json().catch(() => null);
-    if (!res.ok && notFound(res.status, data)) {
-      const alt = await pickAvailableModel(env);
-      if (alt && alt !== model) { model = alt; res = await callGemini(env, model, parts, Boolean(body.json)); data = await res.json().catch(() => null); }
+    while (queue.length && tried.length < 4 && Date.now() - started < 110_000) {
+      model = queue.shift();
+      if (tried.includes(model)) continue;
+      tried.push(model);
+      res = await callGemini(env, model, parts, wantJson);
+      data = await res.json().catch(() => null);
+      if (res.ok) break;
+      if (res.status === 503 || res.status === 500) { // overloaded: one quick retry on the same model
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await callGemini(env, model, parts, wantJson);
+        data = await res.json().catch(() => null);
+        if (res.ok) break;
+      }
+      if (busy(res.status) || notFound(res.status, data)) {
+        if (!listed) { listed = true; for (const m of await availableModels(env)) if (!tried.includes(m)) queue.push(m); }
+        continue;
+      }
+      break; // bad key, bad request, etc: another model will not help
     }
+    if (res && res.ok) workingModel = env.GEMINI_MODEL ? null : model;
   } catch (e) {
     const timedOut = e && (e.name === 'TimeoutError' || e.name === 'AbortError');
     return out({ error: timedOut ? 'timeout' : 'network', model, detail: timedOut ? `Gemini did not answer within ${GEMINI_TIMEOUT_MS / 1000}s` : String(e && e.message || e).slice(0, 200) }, 504);
   }
 
   if (!res.ok) {
-    const detail = String((data && data.error && data.error.message) || '').slice(0, 300);
+    const detail = String((data && data.error && data.error.message) || '').slice(0, 300) + (tried.length > 1 ? ` (tried ${tried.join(', ')})` : '');
     const info = { detail, status: res.status, model };
     if (res.status === 429) return out({ error: 'rate_limited', ...info }, 429);
     if (res.status === 400 || res.status === 403) return out({ error: 'upstream_rejected', ...info }, 502);
@@ -137,5 +156,5 @@ async function generate(env, body) {
   if (!cand) return out({ error: 'refused', model, detail: String((data && data.promptFeedback && data.promptFeedback.blockReason) || 'blocked') }, 422);
   const text = ((cand.content && cand.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
   if (!text.trim()) return out({ error: cand.finishReason === 'SAFETY' ? 'refused' : 'empty', model, detail: `finished with ${cand.finishReason || 'no text'}` }, cand.finishReason === 'SAFETY' ? 422 : 502);
-  return out({ text, model, ms: Date.now() - started, truncated: cand.finishReason === 'MAX_TOKENS' });
+  return out({ text, model, tried: tried.length > 1 ? tried : undefined, ms: Date.now() - started, truncated: cand.finishReason === 'MAX_TOKENS' });
 }
