@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reachloop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2223%22%20fill%3D%22%23151718%22/%3E%3Cg%20transform%3D%22translate%2812%2012%29%20scale%28.76%29%22%3E%3Cpath%20d%3D%22M67.00%2020.56%20A34%2034%200%201%201%2030.50%2022.15%22%20fill%3D%22none%22%20stroke%3D%22%23FF5A4E%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22/%3E%3Cpolygon%20points%3D%2238.69%2C16.41%2035.37%2C29.11%2025.62%2C15.19%22%20fill%3D%22%23FF5A4E%22/%3E%3Cpolygon%20points%3D%2261.26%2C56.50%2050.00%2C63.00%2038.74%2C56.50%2038.74%2C43.50%2050.00%2C37.00%2061.26%2C43.50%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linejoin%3D%22round%22/%3E%3Cline%20x1%3D%2261.26%22%20y1%3D%2256.50%22%20x2%3D%2261.26%22%20y2%3D%2265.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2250.00%22%20y1%3D%2263.00%22%20x2%3D%2242.21%22%20y2%3D%2267.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2238.74%22%20y1%3D%2256.50%22%20x2%3D%2230.95%22%20y2%3D%2252.00%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2238.74%22%20y1%3D%2243.50%22%20x2%3D%2238.74%22%20y2%3D%2234.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2250.00%22%20y1%3D%2237.00%22%20x2%3D%2257.79%22%20y2%3D%2232.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2261.26%22%20y1%3D%2243.50%22%20x2%3D%2269.05%22%20y2%3D%2248.00%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Manrope:wght@500;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Darkroom contact sheet: neutral paper/film-base greys, one safelight-red accent,
+   mono for camera data and times. Mobile: one column + bottom bar; desktop: two-column editor. */
+:root{
+  --bg:#ECEDEB; --surface:#FBFBF9; --ink:#111314; --muted:#4A4F52; --line:#D3D6D3;
+  --accent:#C2302A; --accent-ink:#FFFFFF; --amber:#A86A12; --ok:#2B7A4B; --chip:#E3E5E2;
+  --display:"Outfit", system-ui, sans-serif;
+  --body:"Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E0F10; --surface:#17191A; --ink:#ECEDEA; --muted:#B2B7BA; --line:#2B2E30;
+    --accent:#FF5A4E; --accent-ink:#1A0806; --amber:#E8A33D; --ok:#5DBB82; --chip:#222527;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E0F10; --surface:#17191A; --ink:#ECEDEA; --muted:#B2B7BA; --line:#2B2E30;
+  --accent:#FF5A4E; --accent-ink:#1A0806; --amber:#E8A33D; --ok:#5DBB82; --chip:#222527;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:500 15.5px/1.55 var(--body);-webkit-font-smoothing:antialiased;padding-bottom:84px}
+img,canvas{max-width:100%;display:block}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+h1,h2,h3{font-weight:400;margin:0;text-wrap:balance}
+h2{font:900 31px/1.05 var(--display);letter-spacing:-.02em}
+h3{font:700 12px/1.3 var(--body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.brand{font:800 24px/1 Manrope, system-ui, sans-serif;letter-spacing:-.02em;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:8px}
+.brand .logo{width:30px;height:30px;color:var(--ink);flex:0 0 auto}
+.brand b{font-weight:800;color:var(--accent)}
+.sync{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--amber)}
+.tabs{display:none;gap:4px}
+.tab{border:0;background:transparent;padding:8px 12px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:700}
+.tab[aria-current="true"]{background:var(--ink);color:var(--bg)}
+.bottom{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.bottom button{border:0;background:transparent;padding:6px 0 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.bottom button svg{width:22px;height:22px}
+.bottom button[aria-current="true"]{color:var(--accent)}
+@media (min-width:820px){ .tabs{display:flex} .bottom{display:none} body{padding-bottom:24px} }
+
+main{max-width:1180px;margin:0 auto;padding:16px}
+.view-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
+.view-head p{margin:2px 0 0}
+
+/* surfaces + controls */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ink{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--accent)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+.seg{display:inline-flex;background:var(--chip);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 11px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}
+label.f span.hint{font-weight:400;color:var(--muted)}
+input[type=text],input[type=number],input[type=datetime-local],input[type=time],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:15px}
+textarea{resize:vertical;min-height:80px;line-height:1.45}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.pill.scheduled{background:color-mix(in srgb,var(--amber) 18%,transparent);color:var(--amber)}
+.pill.posted{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.pill.due{background:var(--accent);color:var(--accent-ink)}
+
+/* editor */
+.editor{display:grid;gap:16px}
+@media (min-width:980px){ .editor{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start} .ed-left{position:sticky;top:70px} }
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;background:var(--surface);display:flex;flex-direction:column;gap:6px;align-items:center}
+.drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.drop strong{font:900 22px/1.15 var(--display);letter-spacing:-.01em}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px}
+.thumb{position:relative;flex:0 0 auto;width:64px;height:80px;border-radius:8px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:var(--chip)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb[aria-selected="true"]{border-color:var(--accent)}
+.thumb .n{position:absolute;left:4px;top:3px;font:600 10px var(--mono);background:rgba(0,0,0,.6);color:#fff;border-radius:4px;padding:0 4px}
+.thumb .x{position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:20px;padding:0;cursor:pointer}
+.slides{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+.slide{flex:0 0 auto;width:min(78%,340px);scroll-snap-align:start;position:relative}
+.slide canvas{width:100%;height:auto;border-radius:6px;background:#000}
+.slide .gridmask{position:absolute;inset:0;pointer-events:none}
+.slide .cap{font:500 11px var(--mono);color:var(--muted);margin-top:4px}
+.focal{position:relative;border-radius:10px;overflow:hidden;background:#000;cursor:crosshair;touch-action:none}
+.focal img{width:100%;max-height:360px;object-fit:contain}
+.focal .ch{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.45);pointer-events:none}
+.exif{display:flex;gap:6px;flex-wrap:wrap}
+.exif span{background:var(--chip);border-radius:6px;padding:2px 7px}
+.hooks{display:flex;flex-direction:column;gap:6px}
+.hook{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:14px}
+.hook:hover{border-color:var(--accent)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px}
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border-radius:999px;padding:3px 4px 3px 10px;font-size:13.5px;font-weight:600}
+.tag button{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:0 4px}
+.tags input{border:0;background:transparent;flex:1;min-width:120px;padding:4px;font-size:14px}
+.tags input:focus{outline:none}
+.count{font:500 12px var(--mono);color:var(--muted)}
+.count.over{color:var(--accent);font-weight:700}
+.final{white-space:pre-wrap;word-wrap:break-word;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;max-height:340px;overflow:auto}
+.final .cut{display:inline;border-bottom:2px solid var(--accent)}
+.final .fold{color:var(--muted)}
+.aiwait{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.tip{border-left:3px solid var(--accent);padding:2px 0 2px 10px;font-size:14px}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+.checks label{display:flex;gap:8px;align-items:center;font-size:14px;padding:3px 0}
+
+/* grid */
+.ig{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;max-width:540px}
+.tile{position:relative;aspect-ratio:3/4;background:var(--chip);overflow:hidden;cursor:pointer;border:0;padding:0}
+.tile img{width:100%;height:100%;object-fit:cover}
+.tile .b{position:absolute;left:5px;bottom:5px}
+.tile .ic{position:absolute;right:6px;top:6px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.tile.sel{outline:3px solid var(--accent);outline-offset:-3px}
+.tile.past{opacity:.92}
+.grid-wrap{display:grid;gap:16px}
+@media (min-width:900px){ .grid-wrap{grid-template-columns:540px 1fr;align-items:start} }
+.profile-head{display:flex;gap:14px;align-items:center;margin-bottom:10px}
+.avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--amber));flex:0 0 auto}
+
+/* plan */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat .v{font:900 38px/1 var(--display);letter-spacing:-.02em}
+.stat .l{font-size:12px;color:var(--muted);font-weight:600}
+.bar{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+@media (max-width:640px){ .days{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.day{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px;min-height:92px;display:flex;flex-direction:column;gap:4px}
+.day.today{border-color:var(--accent)}
+.day .d{font:600 11px var(--mono);color:var(--muted)}
+.slot{font:500 11px var(--mono);border:1px dashed var(--line);border-radius:6px;padding:2px 4px;color:var(--muted)}
+.slot.filled{border:0;padding:0;display:flex;gap:4px;align-items:center;color:var(--ink);cursor:pointer;background:transparent;width:100%;text-align:left}
+.slot.filled img{width:22px;height:28px;object-fit:cover;border-radius:3px}
+.qitem{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.qitem:first-child{border-top:0}
+.qitem img{width:52px;height:68px;object-fit:cover;border-radius:6px;background:var(--chip)}
+.qitem .meta{flex:1;min-width:0}
+.qitem .meta .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.wk:first-child{border-top:0}
+.wk .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tchip{font:500 12.5px var(--mono);background:var(--chip);border-radius:999px;padding:3px 4px 3px 9px;display:inline-flex;align-items:center;gap:2px}
+.tchip button{border:0;background:transparent;cursor:pointer;color:var(--muted);padding:0 4px}
+.wk input[type=time]{width:auto;padding:3px 6px;font-size:13px}
+.two{display:grid;gap:16px}
+.two>*,.wk>*,.editor>*{min-width:0}
+.wk input[type=time]{max-width:118px}
+@media (min-width:900px){ .two{grid-template-columns:1fr 1fr;align-items:start} }
+
+.banner{background:color-mix(in srgb,var(--amber) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--amber) 40%,var(--line));border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:14px}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+.hide{display:none!important}
+.saved-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.saved-imgs img{border-radius:6px}
+/* reach check + results */
+.rsum{display:flex;gap:6px;flex-wrap:wrap}
+.rc{display:grid;grid-template-columns:12px 1fr;gap:4px 10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.rc:first-of-type{border-top:0}
+.rc .dot{margin-top:6px}
+.dot.strong{background:var(--ok)} .dot.okay{background:var(--amber)} .dot.weak{background:var(--accent)}
+.rc .area{font-weight:700}
+.rc .sig{font:600 10.5px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-left:6px}
+.rc .fix{margin-top:3px;color:var(--ink)}
+.rc .fix b{color:var(--accent)}
+.rform{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin-top:8px}
+.rform label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}
+.rform input{padding:7px 9px;font-size:14px}
+.rtable{width:100%;border-collapse:collapse;font-size:13px}
+.rtable th{text-align:right;font:600 10.5px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rtable th:first-child,.rtable td:first-child{text-align:left}
+.rtable td{text-align:right;padding:6px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtable td img{width:30px;height:40px;object-fit:cover;border-radius:3px;flex:0 0 auto}
+.rtable .pc{display:flex;align-items:center;gap:8px;font-family:var(--body);font-size:13px;line-height:1.3}
+.rtable tr.top td{background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.scroll-x{overflow-x:auto}
+/* reels */
+.rprev{width:100%;max-width:270px;aspect-ratio:9/16;border-radius:12px;background:#000;display:block}
+.rvid{width:100%;max-width:270px;border-radius:12px;background:#000}
+.concept{border-top:3px solid var(--accent)}
+.concept .tl{display:grid;grid-template-columns:62px 1fr;gap:4px 10px;font-size:14px}
+.concept .tl .at{font:500 12px var(--mono);color:var(--muted);padding-top:2px}
+.prog{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
+.shot{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.shot:first-child{border-top:0}
+.shot .sec{font:500 11.5px var(--mono);color:var(--muted)}
+.shot.done .what{text-decoration:line-through;color:var(--muted)}
+.ordchips{display:flex;gap:4px;flex-wrap:wrap}
+.ordchips img{width:34px;height:44px;object-fit:cover;border-radius:4px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><path d="M67.00 20.56 A34 34 0 1 1 30.50 22.15" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/><polygon points="38.69,16.41 35.37,29.11 25.62,15.19" fill="var(--accent)"/><polygon points="61.26,56.50 50.00,63.00 38.74,56.50 38.74,43.50 50.00,37.00 61.26,43.50" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/><line x1="61.26" y1="56.50" x2="61.26" y2="65.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="50.00" y1="63.00" x2="42.21" y2="67.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="38.74" y1="56.50" x2="30.95" y2="52.00" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="38.74" y1="43.50" x2="38.74" y2="34.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="50.00" y1="37.00" x2="57.79" y2="32.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="61.26" y1="43.50" x2="69.05" y2="48.00" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg><span>reach<b>loop</b></span></div>
+  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+  <div class="sync" id="sync"><span class="dot"></span><span>Connecting…</span></div>
+</div></header>
+<main id="main"></main>
+<nav class="bottom" id="bottom" aria-label="Sections"></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="filePick" accept="image/*,video/*" multiple class="hide">
+<input type="file" id="pastPick" accept="image/*" multiple class="hide">
+
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js"></script>
+<script>
+"use strict";
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const newId=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-5);
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const RATIOS={'3:4':[3,4],'4:5':[4,5],'1:1':[1,1],'9:16':[9,16]};
+const pad2=n=>String(n).padStart(2,'0');
+const fmtDT=ts=>{const d=new Date(ts);return `${DAYS[d.getDay()]} ${d.getDate()} ${d.toLocaleString('en',{month:'short'})} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`};
+const toLocalInput=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`};
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
+
+const DEFAULT_SETTINGS={handle:'',niche:'',city:'',voice:'Storyteller',signature:'',language:'English',tagBank:'',gearLine:true,goal:4,
+  slots:{0:['10:00','18:30'],1:['08:00','19:30'],2:['08:00','13:00','19:30'],3:['08:00','19:30'],4:['08:00','13:00','19:30'],5:['08:00','20:00'],6:['10:00','18:30']}};
+
+const S={db:null,col:null,uid:null,assets:null,sample:null,dl:null,mode:'loading',
+  posts:new Map(),shots:new Map(),settings:JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+  view:'create',draft:null,selImg:0,reorder:false,sel:null,showGridMask:true,aiBusy:false,aiCtl:null,videos:{}};
+
+/* ---------- EXIF (JPEG APP1) ---------- */
+function parseExif(buf){
+  const v=new DataView(buf); if(v.byteLength<4||v.getUint16(0)!==0xFFD8) return null;
+  let o=2;
+  while(o<v.byteLength-4){
+    const m=v.getUint16(o);
+    if(m===0xFFE1){ if(v.getUint32(o+4)===0x45786966) return readTiff(v,o+10); o+=2+v.getUint16(o+2); }
+    else if((m&0xFF00)===0xFF00){ if(m===0xFFDA) break; o+=2+v.getUint16(o+2); }
+    else break;
+  }
+  return null;
+}
+function readTiff(v,t){
+  const le=v.getUint16(t)===0x4949, g16=p=>v.getUint16(p,le), g32=p=>v.getUint32(p,le);
+  const names={0x010F:'make',0x0110:'model',0x829A:'exposure',0x829D:'fnumber',0x8827:'iso',0x9003:'date',0x920A:'focal',0xA405:'focal35',0xA434:'lens'};
+  const out={}; let gps=0;
+  function ifd(off){
+    let sub=0; const base=t+off; if(base+2>v.byteLength) return 0;
+    const n=g16(base);
+    for(let i=0;i<n;i++){
+      const e=base+2+i*12; if(e+12>v.byteLength) break;
+      const tag=g16(e),type=g16(e+2),cnt=g32(e+4),vo=e+8;
+      if(tag===0x8769){sub=g32(vo);continue}
+      if(tag===0x8825){gps=g32(vo);continue}
+      const name=names[tag]; if(!name) continue;
+      try{
+        if(type===2){const p=cnt>4?t+g32(vo):vo;let s='';for(let k=0;k<cnt-1&&p+k<v.byteLength;k++)s+=String.fromCharCode(v.getUint8(p+k));out[name]=s.replace(/\0/g,'').trim()}
+        else if(type===3) out[name]=g16(vo);
+        else if(type===4) out[name]=g32(vo);
+        else if(type===5||type===10){const p=t+g32(vo);const a=g32(p),b=g32(p+4);out[name]=b?a/b:0}
+      }catch(_){}
+    }
+    return sub;
+  }
+  const sub=ifd(g32(t+4)); if(sub) ifd(sub);
+  if(gps){ try{
+    const base=t+gps, n=g16(base), g={};
+    for(let i=0;i<n;i++){
+      const e=base+2+i*12, tag=g16(e), type=g16(e+2), cnt=g32(e+4), vo=e+8;
+      if((tag===1||tag===3)&&type===2) g[tag]=String.fromCharCode(v.getUint8(vo));
+      if((tag===2||tag===4)&&type===5&&cnt===3){ const p=t+g32(vo), r=k=>{const b=g32(p+k*8+4);return b?g32(p+k*8)/b:0}; g[tag]=r(0)+r(1)/60+r(2)/3600 }
+    }
+    if(g[2]!=null&&g[4]!=null&&!(g[2]===0&&g[4]===0)){ out.lat=+(g[2]*(g[1]==='S'?-1:1)).toFixed(6); out.lon=+(g[4]*(g[3]==='W'?-1:1)).toFixed(6) }
+  }catch(_){} }
+  if(out.date){ const m=/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2})/.exec(out.date); if(m) out.takenAt=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime() }
+  if(out.make&&out.model&&out.model.toLowerCase().startsWith(out.make.toLowerCase().split(' ')[0])) out.make='';
+  return out;
+}
+function exifParts(x){
+  if(!x) return [];
+  if(x.video) return ['Video'+(x.duration?` · ${x.duration.toFixed(1)}s`:'')];
+  const p=[];
+  const cam=[x.make,x.model].filter(Boolean).join(' ').replace(/\s+/g,' ').trim(); if(cam)p.push(cam);
+  if(x.lens) p.push(x.lens);
+  if(x.focal) p.push(Math.round(x.focal)+'mm'+(x.focal35&&Math.abs(x.focal35-x.focal)>2?` (${x.focal35}mm eq.)`:''));
+  if(x.fnumber) p.push('f/'+(+x.fnumber.toFixed(1)));
+  if(x.exposure) p.push(x.exposure>=1?x.exposure+'s':'1/'+Math.round(1/x.exposure)+'s');
+  if(x.iso) p.push('ISO '+x.iso);
+  return p;
+}
+/* ---------- place + time context ---------- */
+function distM(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180,dl=r(c-a),dn=r(d-b),h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+function postGeo(p){ const im=p.images.find(i=>i.exif&&i.exif.lat!=null); return im?{lat:im.exif.lat,lon:im.exif.lon}:null }
+function postTaken(p){ const im=p.images.find(i=>i.exif&&i.exif.takenAt); return im?im.exif.takenAt:null }
+function nearestPlace(g){
+  let best=null; for(const pl of (S.settings.places||[])){ const d=distM(g.lat,g.lon,pl.lat,pl.lon); if(d<=(pl.r||300)&&(!best||d<best.d)) best={...pl,d} } return best;
+}
+function lightOf(h){ return h<5?'night':h<7?'dawn / early morning':h<10?'morning':h<15?'midday':h<17?'afternoon':h<19?'golden hour / evening':'night' }
+function shotContext(p){
+  const lines=[], tk=postTaken(p), g=postGeo(p);
+  if(tk){ const d=new Date(tk), age=(Date.now()-tk)/86400000;
+    lines.push(`Taken: ${d.toLocaleDateString('en',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}, ${pad2(d.getHours())}:${pad2(d.getMinutes())} by the camera clock (roughly ${lightOf(d.getHours())}; check against the image)${age>180?`. This is about ${age>700?Math.round(age/365)+' years':Math.round(age/30)+' months'} old, so a throwback framing may fit`:''}`) }
+  if(g) lines.push(`GPS: ${g.lat}, ${g.lon}${p.location?` (photographer tagged it "${p.location}")`:''}`);
+  return lines.join('\n');
+}
+function fmtTaken(ts){const d=new Date(ts);return `${d.getDate()} ${d.toLocaleString('en',{month:'short'})} ${d.getFullYear()} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`}
+function gearLine(x){
+  if(!x||x.video) return '';
+  const cam=[x.make,x.model].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+  const s=[cam, x.focal?Math.round(x.focal)+'mm':'', x.fnumber?'f/'+(+x.fnumber.toFixed(1)):'', x.exposure?(x.exposure>=1?x.exposure+'s':'1/'+Math.round(1/x.exposure)+'s'):'', x.iso?'ISO '+x.iso:''].filter(Boolean);
+  return s.length>1?'📷 '+s.join(' · '):'';
+}
+
+/* ---------- images ---------- */
+const imgCache=new Map();
+function getImg(src){
+  if(imgCache.has(src)) return imgCache.get(src);
+  const p=new Promise((res,rej)=>{const i=new Image();i.decoding='async';i.onload=()=>res(i);i.onerror=()=>rej(new Error('Image failed to load'));i.src=src});
+  imgCache.set(src,p); p.catch(()=>imgCache.delete(src)); return p;
+}
+async function loadBitmap(file){
+  try{ return await createImageBitmap(file,{imageOrientation:'from-image'}) }
+  catch(_){ const u=URL.createObjectURL(file); try{ return await getImg(u) } finally{} }
+}
+function srcDims(s){return {w:s.naturalWidth||s.videoWidth||s.width,h:s.naturalHeight||s.videoHeight||s.height}}
+function toJpeg(src,maxEdge,q=.9){
+  const {w,h}=srcDims(src); const sc=Math.min(1,maxEdge/Math.max(w,h));
+  const c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+  const x=c.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(src,0,0,c.width,c.height);
+  return new Promise(r=>c.toBlob(b=>r({blob:b,w:c.width,h:c.height}),'image/jpeg',q));
+}
+const blobToDataURL=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
+function grabVideoFrame(url,t){
+  return new Promise((res,rej)=>{
+    const v=document.createElement('video'); v.muted=true; v.playsInline=true; v.preload='auto'; v.src=url;
+    v.onloadedmetadata=()=>{ v.currentTime=clamp(t??Math.min(1,v.duration/3),0,Math.max(0,v.duration-0.05)) };
+    v.onseeked=()=>{ const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext('2d').drawImage(v,0,0); res({canvas:c,duration:v.duration}) };
+    v.onerror=()=>rej(new Error('This video format cannot be read in the browser'));
+  });
+}
+function grabFrames(url,count){
+  return new Promise((res,rej)=>{
+    const v=document.createElement('video'); v.muted=true; v.playsInline=true; v.preload='auto'; v.src=url;
+    const out=[]; let i=0, times=[];
+    v.onloadedmetadata=()=>{ times=Array.from({length:count},(_,k)=>(k+0.5)/count*v.duration); v.currentTime=times[0] };
+    v.onseeked=()=>{
+      const sc=Math.min(1,640/Math.max(v.videoWidth,v.videoHeight)); const c=cv(Math.round(v.videoWidth*sc),Math.round(v.videoHeight*sc));
+      c.getContext('2d').drawImage(v,0,0,c.width,c.height); out.push({canvas:c,t:times[i]}); i++;
+      if(i<times.length) v.currentTime=times[i]; else res(out);
+    };
+    v.onerror=()=>rej(new Error('video'));
+  });
+}
+async function storeSmall(c){
+  if(S.assets){ try{ const b=await toJpeg(c,640,.8); const a=await S.assets.upload(b.blob); return a.url||('/_blob/'+a.id) }catch(_){} }
+  return blobToDataURL((await toJpeg(c,320,.72)).blob);
+}
+async function storeImage(srcEl,maxEdge){
+  const big=await toJpeg(srcEl,maxEdge,.92);
+  if(S.assets){
+    try{ const a=await S.assets.upload(big.blob); return {src:a.url||('/_blob/'+a.id),assetId:a.id,w:big.w,h:big.h} }
+    catch(e){ console.warn('asset upload failed',e) }
+  }
+  const small=await toJpeg(srcEl,S.db?720:1440,.82);
+  return {src:await blobToDataURL(small.blob),w:big.w,h:big.h};
+}
+async function ingestFile(file,maxEdge=4096){
+  const isVideo=(file.type||'').startsWith('video/');
+  let exif={},el,videoURL=null;
+  if(isVideo){ videoURL=URL.createObjectURL(file); const r=await grabVideoFrame(videoURL); el=r.canvas; exif={video:true,duration:r.duration} }
+  else { try{ exif=parseExif(await file.slice(0,262144).arrayBuffer())||{} }catch(_){}; el=await loadBitmap(file) }
+  const st=await storeImage(el,maxEdge);
+  const im={k:newId(),src:st.src,assetId:st.assetId||null,w:st.w,h:st.h,fx:.5,fy:.5,exif,name:file.name||''};
+  // keep a local high-quality copy for this session's renders
+  try{ const local=await toJpeg(el,maxEdge,.92); const u=URL.createObjectURL(local.blob); imgCache.set(st.src,getImg(u)) }catch(_){}
+  if(videoURL){
+    S.videos[im.k]=videoURL;
+    // six frames across the clip so Claude can follow what happens in it
+    try{ const fr=await grabFrames(videoURL,6); im.frames=[]; for(const f of fr) im.frames.push({src:await storeSmall(f.canvas),t:+f.t.toFixed(1)}) }catch(_){}
+  }
+  return im;
+}
+
+/* ---------- rendering ---------- */
+function cv(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function coverDraw(x,src,im,W,H){
+  const s=Math.max(W/im.w,H/im.h), dw=im.w*s, dh=im.h*s;
+  x.drawImage(src, clamp(W/2-im.fx*dw,W-dw,0), clamp(H/2-im.fy*dh,H-dh,0), dw, dh);
+}
+function slideRatio(p){return p.format==='reel'?'9:16':p.ratio}
+function splitCount(p){
+  const im=p.images[0]; if(!im) return 2; const [rw,rh]=RATIOS[p.ratio];
+  const auto=clamp(Math.round((im.w/im.h)/(rw/rh)),2,10);
+  return p.slices?clamp(p.slices,2,10):auto;
+}
+async function renderSlides(p,W){
+  const [rw,rh]=RATIOS[slideRatio(p)], H=Math.round(W*rh/rw), out=[];
+  if(p.fit==='split'&&p.images.length===1&&p.format!=='reel'){
+    const im=p.images[0], src=await getImg(im.src), n=splitCount(p), TW=W*n;
+    let s=H/im.h; if(im.w*s<TW) s=TW/im.w;
+    const dw=im.w*s, dh=im.h*s, ox=clamp(TW/2-im.fx*dw,TW-dw,0), oy=clamp(H/2-im.fy*dh,H-dh,0);
+    for(let i=0;i<n;i++){const c=cv(W,H),x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(src,ox-i*W,oy,dw,dh);out.push(c)}
+    return out;
+  }
+  for(const im of p.images){
+    const src=await getImg(im.src), c=cv(W,H), x=c.getContext('2d'); x.imageSmoothingQuality='high';
+    if(p.fit==='border'&&p.format!=='reel'){
+      if(p.border==='blur'){
+        const t=cv(24,Math.round(24*H/W)); coverDraw(t.getContext('2d'),src,im,t.width,t.height);
+        x.imageSmoothingEnabled=true; x.drawImage(t,0,0,W,H); x.fillStyle='rgba(0,0,0,.25)'; x.fillRect(0,0,W,H);
+      } else { x.fillStyle=p.border==='black'?'#000':'#fff'; x.fillRect(0,0,W,H) }
+      const pd=W*(p.pad??4)/100, s=Math.min((W-2*pd)/im.w,(H-2*pd)/im.h), dw=im.w*s, dh=im.h*s;
+      x.drawImage(src,(W-dw)/2,(H-dh)/2,dw,dh);
+    } else coverDraw(x,src,im,W,H);
+    out.push(c);
+  }
+  return out;
+}
+const thumbCache=new Map();
+function thumbKey(p){return JSON.stringify([p.images.map(i=>[i.src.slice(-40),i.fx,i.fy]),p.ratio,p.fit,p.border,p.pad,p.format,p.slices])}
+async function gridThumb(p){
+  if(!p.images.length) return '';
+  const k=thumbKey(p); if(thumbCache.has(k)) return thumbCache.get(k);
+  const pr=(async()=>{
+    const [first]=await renderSlides({...p,images:p.fit==='split'?p.images:[p.images[0]]},360);
+    const H=480, c=cv(360,H), x=c.getContext('2d'), s=Math.max(360/first.width,H/first.height);
+    x.drawImage(first,(360-first.width*s)/2,(H-first.height*s)/2,first.width*s,first.height*s);
+    return c.toDataURL('image/jpeg',.8);
+  })();
+  thumbCache.set(k,pr); pr.catch(()=>thumbCache.delete(k)); return pr;
+}
+
+/* ---------- persistence ---------- */
+const pend=new Map(), inflight=new Set(), timers={};
+function dbBody(o){return JSON.parse(JSON.stringify(o))}
+function queueSave(docId,body){
+  pend.set(docId,body); clearTimeout(timers[docId]); timers[docId]=setTimeout(()=>flush(docId),700);
+}
+async function flush(docId){
+  if(inflight.has(docId)){timers[docId]=setTimeout(()=>flush(docId),400);return}
+  if(!pend.has(docId)) return;
+  const body=pend.get(docId); pend.delete(docId); inflight.add(docId); setSync('saving');
+  try{ if(body===null) await S.col.doc(docId).delete(); else await S.col.doc(docId).set(body); setSync('ok') }
+  catch(e){
+    if(e&&e.code==='unavailable'){ pend.set(docId,body); setTimeout(()=>flush(docId),1500+Math.random()*1000) }
+    else { setSync('err'); toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete some old posts.':'Could not save. Check your connection.') }
+  } finally { inflight.delete(docId); if(pend.has(docId)&&!timers[docId]) flush(docId) }
+}
+function persistLocal(){
+  try{ localStorage.setItem('contactsheet_v1',JSON.stringify({posts:[...S.posts.values()],shots:[...S.shots.values()],settings:S.settings})) }
+  catch(_){ toast('This browser could not keep the post. It will last until you close the page.') }
+}
+function savePost(p){
+  p.updatedAt=Date.now();
+  if(p.scheduledAt&&p.status==='draft') p.status='scheduled';
+  if(!p.scheduledAt&&p.status==='scheduled') p.status='draft';
+  S.posts.set(p.id,dbBody(p));
+  if(S.col) queueSave('p_'+p.id,dbBody(p)); else persistLocal();
+}
+function deletePost(id){
+  S.posts.delete(id);
+  if(S.col) queueSave('p_'+id,null); else persistLocal();
+}
+function saveSettings(){ if(S.col) queueSave('settings',dbBody(S.settings)); else persistLocal() }
+function setSync(state){
+  const el=$('#sync'); if(!el) return;
+  const map={ok:['ok','Synced'],saving:['','Saving…'],err:['warn','Not saved'],local:['warn','This device only'],loading:['','Connecting…'],offline:['warn','Waiting for sync']};
+  const [c,t]=map[state]||map.ok; el.innerHTML=`<span class="dot ${c}"></span><span>${t}</span>`;
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  renderNav(); go(location.hash.replace('#','')||'create');
+  let tries=0; while(!(window.claude&&window.claude.use)&&tries<30){await new Promise(r=>setTimeout(r,100));tries++}
+  if(!(window.claude&&window.claude.use)){ startLocal(); return }
+  const use=n=>window.claude.use(n).catch(()=>null);
+  const [db,user,assets,sample,dl]=await Promise.all([use('db'),use('user'),use('assets'),use('sample'),use('downloads')]);
+  S.assets=assets; S.sample=sample; S.dl=dl;
+  let uid=null; try{ uid=user?await user.id():null }catch(_){}
+  if(!db||!uid){ startLocal(); refreshAICard(); return }
+  S.db=db; S.uid=uid; S.col=db.collection('data/users/'+uid);
+  let first=true; const tm=setTimeout(()=>{ if(first) setSync('offline') },10000);
+  S.col.onSnapshot(snap=>{
+    const posts=new Map(), shots=new Map();
+    for(const d of snap.docs){ const b=d.data(); if(!b) continue;
+      if(d.id==='settings') S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...b,slots:{...DEFAULT_SETTINGS.slots,...(b.slots||{})}};
+      else if(d.id.startsWith('p_')) posts.set(b.id,b);
+      else if(d.id.startsWith('sl_')) shots.set(b.id,b);
+    }
+    // keep local unsaved edits on top
+    for(const [id,body] of pend){
+      if(id.startsWith('p_')){ if(body) posts.set(body.id,body); else posts.delete(id.slice(2)) }
+      if(id.startsWith('sl_')){ if(body) shots.set(body.id,body); else shots.delete(id.slice(3)) }
+    }
+    S.posts=posts; S.shots=shots;
+    if(!snap.metadata.fromCache){ first=false; clearTimeout(tm); setSync('ok') }
+    // views with text inputs keep focus: only repaint their lists
+    const ae=document.activeElement, typing=ae&&$('#main').contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+    if((S.view==='grid'||S.view==='plan')&&!typing) render(); else if(S.view==='reels') paintShots();
+  },e=>{ clearTimeout(tm); setSync('err'); if(e.code!=='revoked') toast('Sync stopped. Your changes on this page may not be saved.') });
+  S.mode='db'; refreshAICard();
+}
+function startLocal(){
+  S.mode='local'; setSync('local');
+  try{ const raw=localStorage.getItem('contactsheet_v1'); if(raw){ const o=JSON.parse(raw); (o.posts||[]).forEach(p=>S.posts.set(p.id,p)); (o.shots||[]).forEach(x=>S.shots.set(x.id,x)); if(o.settings) S.settings={...S.settings,...o.settings} } }catch(_){}
+  render();
+}
+
+/* ---------- nav ---------- */
+const ICONS={
+  create:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.6"/><path d="M8 5l1.5-2h5L16 5"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="5" height="7"/><rect x="9.5" y="3" width="5" height="7"/><rect x="16" y="3" width="5" height="7"/><rect x="3" y="12" width="5" height="7"/><rect x="9.5" y="12" width="5" height="7"/><rect x="16" y="12" width="5" height="7"/></svg>',
+  plan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>',
+  reels:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="2.5" width="16" height="19" rx="3"/><path d="M4 7.5h16M8.5 2.5l2 5M14 2.5l2 5"/><path d="M10.5 11.5v6l5-3z" fill="currentColor"/></svg>',
+  profile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
+};
+const VIEWS=[['create','Create'],['reels','Reels'],['grid','Grid'],['plan','Plan'],['profile','Profile']];
+function renderNav(){
+  $('#tabs').innerHTML=VIEWS.map(([k,l])=>`<button class="tab" data-go="${k}">${l}</button>`).join('');
+  $('#bottom').innerHTML=VIEWS.map(([k,l])=>`<button data-go="${k}">${ICONS[k]}<span>${l}</span></button>`).join('');
+}
+function go(v){
+  if(!VIEWS.some(x=>x[0]===v)) v='create';
+  S.view=v; S.reorder=false; S.sel=null;
+  $$('[data-go]').forEach(b=>b.setAttribute('aria-current',String(b.dataset.go===v)));
+  try{ if(location.hash!=='#'+v) history.replaceState(null,'','#'+v) }catch(_){}
+  render(); window.scrollTo({top:0});
+}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go)}});
+function render(){
+  const m=$('#main'); m.onclick=null;
+  if(S.view==='create') renderEditor(m);
+  else if(S.view==='grid') renderGrid(m);
+  else if(S.view==='plan') renderPlan(m);
+  else if(S.view==='reels') renderReels(m);
+  else renderProfile(m);
+}
+function localBanner(){ return S.mode==='local'?`<div class="banner">Posts are kept in this browser only. Open this page in Claude while signed in to sync between your phone and desktop.</div>`:'' }
+
+/* ---------- editor ---------- */
+function newDraft(){
+  return {id:newId(),createdAt:Date.now(),updatedAt:Date.now(),status:'draft',format:'photo',ratio:'3:4',fit:'fill',border:'white',pad:4,slices:0,
+    images:[],notes:'',location:'',caption:'',hooks:[],tags:[],alt:[],firstComment:'',reel:null,carousel:null,tips:[],
+    scheduledAt:null,postedAt:null,order:Date.now(),check:{}};
+}
+function openPost(id){
+  const p=S.posts.get(id); if(!p) return;
+  S.draft=JSON.parse(JSON.stringify(p)); S.selImg=0; go('create');
+}
+function D(){ if(!S.draft) S.draft=newDraft(); return S.draft }
+function touch(){ const p=D(); if(p.images.length||p.caption||p.notes) savePost(p) }
+function autoFormat(p){ if(p.format!=='reel') p.format=(p.images.length>1||(p.fit==='split'&&p.images.length===1))?'carousel':'photo' }
+
+function renderEditor(m){
+  const p=D(), isNew=!S.posts.has(p.id);
+  m.innerHTML=`${localBanner()}
+  <div class="view-head"><div><h2>${isNew?'New post':'Edit post'}</h2><p class="muted small">${isNew?'Drop your edited photos or a reel clip. Everything saves as you go.':statusPill(p)+' <span class="mono">'+(p.scheduledAt?fmtDT(p.scheduledAt):'')+'</span>'}</p></div>
+    <div class="row">${!isNew?'<button class="btn sm" id="newPost">Start a new post</button>':''}</div></div>
+  <div class="editor">
+    <div class="ed-left stack">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add photos or a video">
+        <strong>${p.images.length?'Add more':'Add photos or a reel clip'}</strong>
+        <span class="muted small">Up to 20 slides · JPEG/PNG/HEIC from your camera roll or Lightroom export · MP4/MOV for reels</span>
+      </div>
+      <div class="strip" id="strip"></div>
+      <div id="formatBox" class="card stack ${p.images.length?'':'hide'}"></div>
+      <div id="focalBox" class="${p.images.length?'':'hide'}"></div>
+      <div id="previewBox" class="${p.images.length?'':'hide'}">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Preview · as posted</h3>
+          <label class="small row" style="gap:6px"><input type="checkbox" id="maskT" ${S.showGridMask?'checked':''}> Show profile-grid crop</label></div>
+        <div class="slides" id="slides"></div>
+      </div>
+    </div>
+    <div class="ed-right stack">
+      <div class="card stack">
+        <label class="f" for="notes">The story behind it <span class="hint">Where, when, what caught your eye. Claude uses this; the more specific, the better the caption.</span>
+          <textarea id="notes" rows="3" placeholder="e.g. Golden hour at the Basavanagudi flower market, the vendor laughed when I asked to shoot her marigolds">${esc(p.notes)}</textarea></label>
+        <label class="f" for="loc">Location tag <input type="text" id="loc" value="${esc(p.location)}" placeholder="e.g. KR Market, Bengaluru"></label>
+        <div id="locHelp"></div>
+        <div id="exifBox"></div>
+        <div id="aiCard"></div>
+      </div>
+      <div class="card stack" id="copyCard">
+        <div id="hooksBox"></div>
+        <label class="f" for="cap">Caption <span class="hint">Line one is your hook: about the first 125 characters show before "more".</span>
+          <textarea id="cap" rows="8" placeholder="Write it yourself or let Claude draft it">${esc(p.caption)}</textarea></label>
+        <div class="row" style="justify-content:space-between"><span class="count" id="capCount"></span><span class="count" id="hookCount"></span></div>
+        <div class="stack" style="gap:5px"><div class="row" style="justify-content:space-between"><h3>Hashtags</h3><span class="count" id="tagCount"></span></div>
+          <div class="tags" id="tags"></div>
+          <span class="muted small">Instagram allows 5 per post. Mix one genre tag, two subject tags and two place or community tags.</span>
+          <div id="bankBox" class="row"></div></div>
+        <label class="f" for="fc">Pinned first comment <span class="hint">A behind-the-shot detail or question to start the thread.</span>
+          <input type="text" id="fc" value="${esc(p.firstComment)}"></label>
+        <details id="altBox"><summary>Alt text (accessibility + search)</summary><div class="stack" style="margin-top:8px" id="altList"></div>
+          <p class="muted small">In Instagram: Advanced settings → Accessibility → Write alt text.</p></details>
+        <div id="extraBox" class="stack"></div>
+      </div>
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between"><h3>Ready to post</h3><label class="small row" style="gap:6px"><input type="checkbox" id="gearT" ${S.settings.gearLine?'checked':''}> Add camera line</label></div>
+        <div class="final" id="final"></div>
+        <div class="row">
+          <button class="btn primary" id="copyBtn">Copy caption</button>
+          <button class="btn" id="saveImgs">Save images</button>
+          <a class="btn ghost" href="https://www.instagram.com/" target="_blank" rel="noopener">Open Instagram ↗</a>
+        </div>
+        <div id="savedImgs"></div>
+        <p class="muted small" id="saveHint"></p>
+      </div>
+      <div class="card stack" id="reachCard"></div>
+      <div class="card stack ${p.status==='posted'?'':'hide'}" id="resCard"></div>
+      <div class="card stack">
+        <h3>When</h3>
+        <div class="row">
+          <input type="datetime-local" id="when" style="max-width:240px" value="${p.scheduledAt?toLocalInput(p.scheduledAt):''}">
+          <button class="btn sm" id="nextSlot">Next best slot</button>
+          <button class="btn sm ghost ${p.scheduledAt?'':'hide'}" id="unsched">Clear</button>
+        </div>
+        <div class="row" id="calRow"></div>
+        <div class="row">
+          <button class="btn ink" id="markPosted">${p.status==='posted'?'Posted ✓ · undo':'Mark as posted'}</button>
+          <button class="btn danger ghost" id="delPost">Delete</button>
+        </div>
+        <div class="checks ${p.status==='posted'||p.scheduledAt?'':'hide'}" id="checks"></div>
+      </div>
+    </div>
+  </div>`;
+  bindEditor(); paintStrip(); paintFormat(); paintFocal(); paintSlides(); paintExif(); refreshAICard(); paintHooks(); paintTags(); paintAlt(); paintExtra(); paintFinal(); paintCal(); paintChecks(); paintResCard(); paintLoc();
+}
+function paintLoc(){
+  const p=D(), b=$('#locHelp'); if(!b) return;
+  const g=postGeo(p);
+  if(!g){ b.innerHTML=p.images.length&&!p.images.some(i=>i.exif&&i.exif.video)?`<p class="muted small" style="margin:0">No GPS in these files. iPhone: tap Options → Location in the photo picker. Lightroom: geotag the photo and untick "Remove Location Info" on export.</p>`:''; return }
+  const near=nearestPlace(g), maps=`https://www.google.com/maps?q=${g.lat},${g.lon}`;
+  const typedName=(p.location||'').trim();
+  const known=(S.settings.places||[]).some(pl=>pl.name.toLowerCase()===typedName.toLowerCase()&&distM(g.lat,g.lon,pl.lat,pl.lon)<=(pl.r||300));
+  b.innerHTML=`<div class="stack" style="gap:6px">
+    <div class="row small" style="gap:8px"><span class="mono">📍 ${g.lat.toFixed(5)}, ${g.lon.toFixed(5)}</span><a href="${maps}" target="_blank" rel="noopener">Check on map ↗</a></div>
+    ${near?`<div class="small">Matches your saved place <strong>${esc(near.name)}</strong> (${Math.round(near.d)} m away).${p.location!==near.name?` <button class="btn sm" id="useNear">Use it</button>`:''}</div>`:''}
+    ${S.locGuess&&S.locGuess.pid===p.id?`<div class="small">Claude's guess: <strong>${esc(S.locGuess.name)}</strong> <span class="pill ${S.locGuess.confidence==='high'?'posted':'scheduled'}">${esc(S.locGuess.confidence||'medium')} confidence</span>${S.locGuess.note?` <span class="muted">${esc(S.locGuess.note)}</span>`:''}<br><span class="muted">Check it on the map before posting.</span></div>`:''}
+    <div class="row">
+      ${!near&&S.sample?`<button class="btn sm" id="guessLoc" ${S.locBusy?'disabled':''}>${S.locBusy?'Asking…':'Suggest a name with Claude'}</button>`:''}
+      ${typedName&&!known?`<button class="btn sm" id="savePlace">Save "${esc(typedName.length>28?typedName.slice(0,28)+'…':typedName)}" as a place</button>`:''}
+    </div>
+    ${!near&&!typedName?`<p class="muted small" style="margin:0">Type the place name above and save it. Next time you shoot within 300 m, it fills in by itself.</p>`:''}
+  </div>`;
+  $('#useNear')&&($('#useNear').onclick=()=>{p.location=near.name;p.locSource='saved';$('#loc').value=p.location;touch();paintLoc();paintReach()});
+  $('#savePlace')&&($('#savePlace').onclick=()=>{S.settings.places=[...(S.settings.places||[]),{name:typedName,lat:g.lat,lon:g.lon,r:300}];saveSettings();paintLoc();toast(`Saved "${typedName}". Photos from here will be tagged for you.`)});
+  $('#guessLoc')&&($('#guessLoc').onclick=guessLocation);
+}
+async function guessLocation(){
+  const p=D(), g=postGeo(p); if(!g||!S.sample||S.locBusy) return;
+  S.locBusy=true; paintLoc();
+  try{
+    const r=await S.sample.json(`A photographer's photo has GPS coordinates ${g.lat}, ${g.lon}. Their home city is ${S.settings.city||'not given'}. Suggest the location tag they would use on Instagram: the most likely well-known place, landmark, market, lake, neighbourhood or area at or very near those coordinates, followed by the city (e.g. "Ulsoor Lake, Bengaluru"). If you are not sure of a specific landmark, give the neighbourhood and city instead. Do not invent places.
+Reply with only JSON: {"name":"","confidence":"high|medium|low","note":"short reason or what to double-check"}`,{modelTier:'default'});
+    if(!r||!r.name) throw {code:'invalid_json'};
+    S.locGuess={pid:p.id,name:String(r.name),confidence:String(r.confidence||'medium'),note:String(r.note||'')};
+    if(!p.location){ p.location=S.locGuess.name; p.locSource='guess'; $('#loc').value=p.location; touch() }
+  }catch(e){ toast({rate_limited:'Claude is busy or your usage limit was reached.'}[e&&e.code]||'Could not suggest a name. Type it instead.') }
+  S.locBusy=false; paintLoc(); paintReach();
+}
+function statusPill(p){
+  if(p.status==='posted') return '<span class="pill posted">Posted</span>';
+  if(p.scheduledAt){ const due=p.scheduledAt<Date.now(); return `<span class="pill ${due?'due':'scheduled'}">${due?'Due now':'Scheduled'}</span>` }
+  return '<span class="pill">Draft</span>';
+}
+function bindEditor(){
+  const p=D();
+  $('#newPost')?.addEventListener('click',()=>{S.draft=newDraft();S.selImg=0;render()});
+  const drop=$('#drop'), pick=$('#filePick');
+  drop.onclick=()=>pick.click(); drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick.click()}};
+  ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+  ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+  drop.addEventListener('drop',e=>addFiles([...e.dataTransfer.files]));
+  $('#maskT').onchange=e=>{S.showGridMask=e.target.checked;paintSlides()};
+  $('#notes').oninput=e=>{p.notes=e.target.value;touch()};
+  $('#loc').oninput=e=>{p.location=e.target.value;p.locSource='typed';touch();clearTimeout(S._lt);S._lt=setTimeout(paintLoc,400)};
+  $('#cap').oninput=e=>{p.caption=e.target.value;touch();paintFinal()};
+  $('#fc').oninput=e=>{p.firstComment=e.target.value;touch()};
+  $('#gearT').onchange=e=>{S.settings.gearLine=e.target.checked;saveSettings();paintFinal()};
+  $('#copyBtn').onclick=copyCaption;
+  $('#saveImgs').onclick=saveImages;
+  $('#when').onchange=e=>{const v=e.target.value; p.scheduledAt=v?new Date(v).getTime():null; if(p.status==='posted'&&v) p.status='scheduled'; savePost(p); paintCal(); $('#unsched').classList.toggle('hide',!p.scheduledAt); paintChecks()};
+  $('#nextSlot').onclick=()=>{const t=nextFreeSlot(p.id); if(!t){toast('No free slot in the next 3 weeks. Add times in Plan.');return} p.scheduledAt=t; if(p.status==='posted')p.status='scheduled'; savePost(p); $('#when').value=toLocalInput(t); $('#unsched').classList.remove('hide'); paintCal(); paintChecks(); toast('Scheduled for '+fmtDT(t))};
+  $('#unsched').onclick=()=>{p.scheduledAt=null;savePost(p);$('#when').value='';$('#unsched').classList.add('hide');paintCal()};
+  $('#markPosted').onclick=()=>{
+    if(p.status==='posted'){p.status=p.scheduledAt?'scheduled':'draft';p.postedAt=null}
+    else{p.status='posted';p.postedAt=Date.now()}
+    savePost(p); renderEditor($('#main'));
+    if(p.status==='posted') toast('Nice. Spend the next hour replying to comments.');
+  };
+  let armed=false;
+  $('#delPost').onclick=e=>{
+    if(!armed){armed=true;e.target.textContent='Tap again to delete';setTimeout(()=>{armed=false;if(e.target.isConnected)e.target.textContent='Delete'},3000);return}
+    deletePost(p.id); S.draft=newDraft(); toast('Post deleted'); render();
+  };
+}
+async function addFiles(files){
+  const p=D(); files=files.filter(f=>/^(image|video)\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp|mp4|mov)$/i.test(f.name));
+  if(!files.length) return;
+  const room=20-p.images.length; if(room<=0){toast('Instagram allows up to 20 slides.');return}
+  files=files.slice(0,room);
+  const hint=$('#drop strong')||$('#rAddMsg')||document.createElement('span'); const old=hint.textContent;
+  let done=0;
+  for(const f of files){
+    hint.textContent=`Preparing ${++done} of ${files.length}${/^video\//.test(f.type)?' (reading the clip)':''}…`;
+    try{ const im=await ingestFile(f); p.images.push(im); if(im.exif.video) p.format='reel' }
+    catch(e){ toast(`${f.name}: ${/heic|heif/i.test(f.name)?'HEIC could not be read here. Export as JPEG.':'could not be read.'}`) }
+  }
+  hint.textContent=old;
+  if(!p.location){ const g=postGeo(p), near=g&&nearestPlace(g); if(near){ p.location=near.name; p.locSource='saved'; toast(`Tagged "${near.name}" from GPS`) } }
+  autoFormat(p); p.alt.length=p.images.length; if(p.reelBuild) p.reelBuild.order=p.images.map((_,i)=>i+1); savePost(p); render();
+}
+function paintStrip(){
+  const p=D(), s=$('#strip'); if(!s) return;
+  s.innerHTML=p.images.map((im,i)=>`<div class="thumb" role="button" tabindex="0" data-i="${i}" aria-selected="${i===S.selImg}" aria-label="Slide ${i+1}"><img src="${esc(im.src)}" alt=""><span class="n">${i+1}</span><button class="x" data-rm="${i}" aria-label="Remove slide ${i+1}">×</button></div>`).join('')
+   +(p.images.length>1?`<div class="row" style="flex-direction:column;justify-content:center;gap:4px"><button class="btn sm" id="mvL" aria-label="Move selected slide left">←</button><button class="btn sm" id="mvR" aria-label="Move selected slide right">→</button></div>`:'');
+  s.onclick=e=>{
+    const rm=e.target.closest('[data-rm]');
+    if(rm){const i=+rm.dataset.rm; const [gone]=p.images.splice(i,1); p.alt.splice(i,1); if(gone&&S.videos[gone.k]) p.format=p.images.some(x=>x.exif.video)?'reel':'photo'; S.selImg=clamp(S.selImg,0,Math.max(0,p.images.length-1)); autoFormat(p); savePost(p); renderEditor($('#main')); return}
+    const t=e.target.closest('.thumb'); if(t){S.selImg=+t.dataset.i; paintStrip(); paintFocal(); return}
+    if(e.target.id==='mvL'||e.target.id==='mvR'){
+      const i=S.selImg, j=e.target.id==='mvL'?i-1:i+1; if(j<0||j>=p.images.length) return;
+      [p.images[i],p.images[j]]=[p.images[j],p.images[i]]; [p.alt[i],p.alt[j]]=[p.alt[j],p.alt[i]]; S.selImg=j; savePost(p); paintStrip(); paintSlides(); paintAlt();
+    }
+  };
+}
+function seg(id,opts,val){return `<div class="seg" id="${id}" role="group">${opts.map(([v,l])=>`<button data-v="${v}" aria-pressed="${String(v)===String(val)}">${l}</button>`).join('')}</div>`}
+function paintFormat(){
+  const p=D(), b=$('#formatBox'); if(!b||!p.images.length) return;
+  const reel=p.format==='reel', single=p.images.length===1;
+  b.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Format</h3><span class="pill">${reel?'Reel · 9:16':p.format==='carousel'?`Carousel · ${p.fit==='split'&&single?splitCount(p):p.images.length} slides`:'Single photo'}</span></div>
+    <div class="row">${seg('fmtSeg',[['post','Feed post'],['reel','Reel']],reel?'reel':'post')}
+    ${reel?'':seg('ratioSeg',[['3:4','3:4 tall'],['4:5','4:5'],['1:1','1:1']],p.ratio)}</div>
+    ${reel?`<p class="muted small" style="margin:0">Reels are 1080 × 1920. Keep text and faces in the middle; your profile grid shows a centre 3:4 crop of the cover.</p>`:`
+    <div class="row">${seg('fitSeg',[['fill','Fill frame'],['border','Fit with border'],...(single?[['split','Seamless panorama']]:[])],p.fit)}</div>
+    ${p.fit==='border'?`<div class="row">${seg('bdSeg',[['white','White'],['black','Black'],['blur','Blurred']],p.border)}
+      <label class="small row" style="gap:6px">Border <input type="range" id="padR" min="0" max="12" step="1" value="${p.pad??4}" style="width:110px"> <span class="mono" id="padV">${p.pad??4}%</span></label></div>`:''}
+    ${p.fit==='split'&&single?`<label class="small row" style="gap:6px">Slides <input type="number" id="slN" min="2" max="10" value="${splitCount(p)}" style="width:70px"> <span class="muted">Swipe-through panorama. Auto: ${clamp(Math.round((p.images[0].w/p.images[0].h)/(RATIOS[p.ratio][0]/RATIOS[p.ratio][1])),2,10)}</span></label>`:''}
+    <p class="muted small" style="margin:0">${p.ratio==='3:4'?'3:4 (1080 × 1440) fills both the feed and the profile grid with no crop.':p.ratio==='4:5'?'4:5 (1080 × 1350) loses a sliver at the sides on the profile grid.':'Square shows bars top and bottom on the 3:4 profile grid.'} Every slide in a carousel uses the first slide's shape.</p>`}`;
+  const set=(k,v)=>{p[k]=v;autoFormat(p);savePost(p);paintFormat();paintFocal();paintSlides()};
+  $('#fmtSeg').onclick=e=>{const v=e.target.dataset.v; if(!v) return; p.format=v==='reel'?'reel':'photo'; if(v==='reel'&&p.fit==='split') p.fit='fill'; autoFormat(p); savePost(p); paintFormat(); paintFocal(); paintSlides(); paintExtra(); refreshAICard()};
+  $('#ratioSeg')&&($('#ratioSeg').onclick=e=>{const v=e.target.dataset.v;if(v){p.slices=0;set('ratio',v)}});
+  $('#fitSeg')&&($('#fitSeg').onclick=e=>{const v=e.target.dataset.v;if(v){p.slices=0;set('fit',v)}});
+  $('#bdSeg')&&($('#bdSeg').onclick=e=>{const v=e.target.dataset.v;if(v)set('border',v)});
+  $('#padR')&&($('#padR').oninput=e=>{p.pad=+e.target.value;$('#padV').textContent=p.pad+'%';clearTimeout(S._pt);S._pt=setTimeout(()=>{savePost(p);paintSlides()},150)});
+  $('#slN')&&($('#slN').onchange=e=>{p.slices=clamp(+e.target.value||2,2,10);savePost(p);paintFormat();paintSlides()});
+}
+function paintFocal(){
+  const p=D(), b=$('#focalBox'); if(!b) return;
+  const im=p.images[S.selImg]; if(!im){b.innerHTML='';return}
+  const needs=p.fit!=='border'||p.format==='reel';
+  const vid=S.videos[im.k];
+  b.innerHTML=`<div class="card stack">
+    <div class="row" style="justify-content:space-between"><h3>${needs?'Focus point · slide '+(S.selImg+1):'Slide '+(S.selImg+1)}</h3><span class="muted small">${needs?'Tap what must stay in frame':'Whole photo is kept'}</span></div>
+    <div class="focal" id="focal"><img src="${esc(im.src)}" alt="Slide ${S.selImg+1}">${needs?`<div class="ch" id="ch"></div>`:''}</div>
+    ${vid?`<label class="small stack" style="gap:4px">Reel cover frame <input type="range" id="vt" min="0" max="1000" value="333"></label><div class="row"><button class="btn sm" id="useFrame">Use this frame as cover</button><span class="muted small">Instagram also lets you pick or upload a cover when posting.</span></div>`:''}
+  </div>`;
+  const f=$('#focal'), img=f.querySelector('img');
+  const place=()=>{ const ch=$('#ch'); if(!ch) return; const r=img.getBoundingClientRect(), fr=f.getBoundingClientRect(); const s=Math.min(r.width/im.w,r.height/im.h); const dw=im.w*s, dh=im.h*s; const ox=(r.width-dw)/2+(r.left-fr.left), oy=(r.height-dh)/2+(r.top-fr.top); ch.style.left=(ox+im.fx*dw)+'px'; ch.style.top=(oy+im.fy*dh)+'px'; };
+  if(img.complete) place(); else img.onload=place;
+  if(needs) f.onpointerdown=e=>{
+    const r=img.getBoundingClientRect(); const s=Math.min(r.width/im.w,r.height/im.h); const dw=im.w*s, dh=im.h*s;
+    const x=(e.clientX-r.left-(r.width-dw)/2)/dw, y=(e.clientY-r.top-(r.height-dh)/2)/dh;
+    im.fx=+clamp(x,0,1).toFixed(3); im.fy=+clamp(y,0,1).toFixed(3); place(); savePost(p); clearTimeout(S._ft); S._ft=setTimeout(paintSlides,120);
+  };
+  if(vid){
+    let dur=0; const v=document.createElement('video'); v.src=vid; v.muted=true; v.preload='metadata'; v.onloadedmetadata=()=>dur=v.duration;
+    $('#vt').oninput=async e=>{ if(!dur) return; try{ const r=await grabVideoFrame(vid,dur*e.target.value/1000); img.src=r.canvas.toDataURL('image/jpeg',.7) }catch(_){} };
+    $('#useFrame').onclick=async()=>{
+      const btn=$('#useFrame'); btn.disabled=true; btn.textContent='Saving frame…';
+      try{ const r=await grabVideoFrame(vid,dur*$('#vt').value/1000); const st=await storeImage(r.canvas,4096); Object.assign(im,{src:st.src,assetId:st.assetId||null,w:st.w,h:st.h}); savePost(p); paintStrip(); paintSlides(); toast('Cover updated') }
+      catch(_){ toast('Could not grab that frame') }
+      btn.disabled=false; btn.textContent='Use this frame as cover';
+    };
+  }
+}
+let slideJob=0;
+async function paintSlides(){
+  const p=D(), box=$('#slides'); if(!box||!p.images.length) return;
+  const job=++slideJob;
+  let cs; try{ cs=await renderSlides(p,540) }catch(e){ box.innerHTML='<p class="muted">Preview could not load.</p>'; return }
+  if(job!==slideJob) return;
+  const [rw,rh]=RATIOS[slideRatio(p)];
+  box.innerHTML='';
+  cs.forEach((c,i)=>{
+    const wrap=document.createElement('div'); wrap.className='slide'; wrap.appendChild(c);
+    if(S.showGridMask&&(i===0||p.fit==='split')&&slideRatio(p)!=='3:4'){
+      // profile grid shows a centred 3:4 cover-crop of slide 1
+      const W=c.width,H=c.height, tr=3/4, sr=W/H; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('class','gridmask');
+      let r; if(sr>tr){const cw=H*tr;r=[(W-cw)/2,0,cw,H]}else{const ch=W/tr;r=[0,(H-ch)/2,W,ch]}
+      if(i===0) svg.innerHTML=`<path fill="rgba(0,0,0,.45)" fill-rule="evenodd" d="M0 0H${W}V${H}H0Z M${r[0]} ${r[1]}h${r[2]}v${r[3]}h${-r[2]}Z"/><rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="none" stroke="#fff" stroke-dasharray="8 6" stroke-width="2"/>`;
+      if(i===0) wrap.appendChild(svg);
+    }
+    const cap=document.createElement('div'); cap.className='cap';
+    const [W1,H1]=[1080,Math.round(1080*rh/rw)];
+    cap.textContent=`${i+1}/${cs.length} · ${W1}×${H1}${i===0&&S.showGridMask&&slideRatio(p)!=='3:4'?' · dashed = grid tile':''}`;
+    wrap.appendChild(cap); box.appendChild(wrap);
+  });
+}
+function paintExif(){
+  const p=D(), b=$('#exifBox'); if(!b) return;
+  const im=p.images[0]; const parts=exifParts(im&&im.exif); const tk=postTaken(p);
+  if(tk) parts.push('📅 '+fmtTaken(tk)+' · '+lightOf(new Date(tk).getHours()));
+  b.innerHTML=parts.length?`<div class="exif mono">${parts.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:(im?'<p class="muted small" style="margin:0">No camera data in this file. Lightroom: check "Include: All metadata" on export.</p>':'');
+}
+function refreshAICard(){
+  const b=$('#aiCard'); if(!b) return; const p=D();
+  if(S.aiBusy){ b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span><span id="aiMsg">Claude is looking at your ${p.images.length>1?'photos':'photo'}…</span></div><button class="btn sm" id="aiStop">Stop</button></div>`; $('#aiStop').onclick=()=>S.aiCtl?.abort(); return }
+  if(!S.sample){ b.innerHTML=S.mode==='loading'?'':`<p class="muted small" style="margin:0">Claude drafting is available when this page is opened inside Claude. You can still write captions here and use the quick draft.</p><button class="btn" id="tplBtn" ${p.images.length?'':'disabled'}>Quick draft from notes</button>`; $('#tplBtn')&&($('#tplBtn').onclick=templateDraft); return }
+  const has=!!(p.caption||p.tags.length);
+  b.innerHTML=`<div class="row"><button class="btn primary" id="aiBtn" ${p.images.length?'':'disabled'}>${has?'Rewrite with Claude':'Write caption with Claude'}</button>
+    <span class="muted small">${p.images.length?`Reads the ${p.images.length>1?'slides':'photo'}, your notes and camera data${p.format==='reel'?'; plans the reel':''}.`:'Add a photo first.'}</span></div>`;
+  $('#aiBtn').onclick=runAI;
+}
+function paintHooks(){
+  const p=D(), b=$('#hooksBox'); if(!b) return;
+  if(!p.hooks||!p.hooks.length){b.innerHTML='';return}
+  b.innerHTML=`<h3 style="margin-bottom:6px">Opening lines · tap to use</h3><div class="hooks">${p.hooks.map((h,i)=>`<button class="hook" data-h="${i}">${esc(h)}</button>`).join('')}</div>`;
+  b.onclick=e=>{const t=e.target.closest('[data-h]'); if(!t) return; const h=p.hooks[+t.dataset.h]; const lines=(p.caption||'').split('\n'); lines[0]=h; p.caption=lines.join('\n'); $('#cap').value=p.caption; touch(); paintFinal()};
+}
+function normTag(s){return s.replace(/^#+/,'').replace(/[^\p{L}\p{N}_]/gu,'').toLowerCase()}
+function paintTags(){
+  const p=D(), b=$('#tags'); if(!b) return;
+  b.innerHTML=p.tags.map((t,i)=>`<span class="tag">#${esc(t)}<button data-rt="${i}" aria-label="Remove #${esc(t)}">×</button></span>`).join('')+`<input id="tagIn" placeholder="${p.tags.length>=5?'5 of 5 used':'add tag, press Enter'}" aria-label="Add hashtag">`;
+  const c=$('#tagCount'); c.textContent=`${p.tags.length}/5`; c.classList.toggle('over',p.tags.length>5);
+  const inp=$('#tagIn');
+  const add=()=>{ const parts=inp.value.split(/[\s,]+/).map(normTag).filter(Boolean); if(!parts.length) return; for(const t of parts) if(!p.tags.includes(t)) p.tags.push(t); if(p.tags.length>5) toast('Over 5 hashtags: Instagram will not accept the post. Remove some.'); touch(); paintTags(); paintFinal(); $('#tagIn').focus() };
+  inp.onkeydown=e=>{ if(e.key==='Enter'||e.key===','||e.key===' '){e.preventDefault();add()} else if(e.key==='Backspace'&&!inp.value&&p.tags.length){p.tags.pop();touch();paintTags();paintFinal();$('#tagIn').focus()} };
+  inp.onblur=()=>{ if(inp.value.trim()) add() };
+  b.onclick=e=>{const r=e.target.closest('[data-rt]'); if(r){p.tags.splice(+r.dataset.rt,1);touch();paintTags();paintFinal()} else if(e.target===b) inp.focus()};
+  const bank=(S.settings.tagBank||'').split(/[\s,]+/).map(normTag).filter(Boolean).filter(t=>!p.tags.includes(t)).slice(0,12);
+  const bb=$('#bankBox'); bb.innerHTML=bank.length?`<span class="muted small">Your tags:</span>`+bank.map(t=>`<button class="btn sm ghost" data-bt="${esc(t)}">#${esc(t)}</button>`).join(''):'';
+  bb.onclick=e=>{const t=e.target.closest('[data-bt]'); if(t&&p.tags.length<5){p.tags.push(t.dataset.bt);touch();paintTags();paintFinal()} else if(t) toast('Already at 5. Remove one first.')};
+}
+function paintAlt(){
+  const p=D(), b=$('#altList'); if(!b) return;
+  if(!p.images.length){b.innerHTML='<p class="muted small">Add photos first.</p>';return}
+  b.innerHTML=p.images.map((im,i)=>`<label class="f" for="alt${i}">Slide ${i+1}<input type="text" id="alt${i}" data-alt="${i}" value="${esc(p.alt[i]||'')}" placeholder="Describe what is in the photo"></label>`).join('');
+  b.oninput=e=>{const i=e.target.dataset.alt; if(i!=null){p.alt[+i]=e.target.value;touch()}};
+}
+function paintExtra(){
+  const p=D(), b=$('#extraBox'); if(!b) return; let h='';
+  if(p.format==='reel'&&p.reel){
+    const r=p.reel;
+    h+=`<div class="stack" style="gap:6px"><h3>Reel plan</h3>
+      ${r.onScreenHooks?.length?`<div><span class="muted small">On-screen text for the first 2 seconds</span><div class="hooks">${r.onScreenHooks.map(x=>`<div class="hook" style="cursor:default">${esc(x)}</div>`).join('')}</div></div>`:''}
+      ${r.beats?.length?`<div><span class="muted small">Edit beats</span><ol style="margin:4px 0 0;padding-left:20px">${r.beats.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`:''}
+      ${r.audioMood?`<div class="small"><strong>Audio:</strong> ${esc(r.audioMood)} <span class="muted">Search Instagram's audio library; tracks with the ↗ trending arrow get extra reach.</span></div>`:''}
+      ${r.coverText?`<div class="small"><strong>Cover text:</strong> ${esc(r.coverText)}</div>`:''}</div>`;
+  }
+  if(p.format==='carousel'&&p.carousel&&p.carousel.order?.length){
+    h+=`<div class="stack" style="gap:6px"><h3>Suggested slide order</h3><div class="row"><span class="mono">${p.carousel.order.join(' → ')}</span><button class="btn sm" id="applyOrder">Apply</button></div><span class="small muted">${esc(p.carousel.reason||'')}</span></div>`;
+  }
+  if(p.tips?.length) h+=`<div class="stack" style="gap:6px"><h3>For this post</h3>${p.tips.map(t=>`<div class="tip">${esc(t)}</div>`).join('')}</div>`;
+  b.innerHTML=h;
+  $('#applyOrder')&&($('#applyOrder').onclick=()=>{
+    const ord=p.carousel.order.map(n=>+n-1).filter(i=>i>=0&&i<p.images.length);
+    if(new Set(ord).size!==p.images.length){toast('That order does not cover every slide.');return}
+    p.images=ord.map(i=>p.images[i]); p.alt=ord.map(i=>p.alt[i]); p.carousel.order=p.images.map((_,i)=>i+1); savePost(p); paintStrip(); paintSlides(); paintAlt(); paintExtra(); toast('Slides reordered');
+  });
+}
+function finalCaption(p){
+  const parts=[(p.caption||'').trim()];
+  const g=S.settings.gearLine&&p.images[0]?gearLine(p.images[0].exif):'';
+  if(g&&!(p.caption||'').includes(g)) parts.push(g);
+  if(S.settings.signature) parts.push(S.settings.signature.trim());
+  if(p.tags.length) parts.push(p.tags.map(t=>'#'+t).join(' '));
+  return parts.filter(Boolean).join('\n\n');
+}
+function paintFinal(){
+  const p=D(), b=$('#final'); if(!b) return;
+  const t=finalCaption(p);
+  if(!t){b.innerHTML='<span class="muted">Your caption, camera line, signature and hashtags appear here, ready to paste.</span>'}
+  else { const cut=Math.min(125,t.length); b.innerHTML=`<span class="cut">${esc(t.slice(0,cut))}</span>${t.length>cut?`<span class="fold">… more</span>\n${esc(t.slice(cut))}`:''}` }
+  const cc=$('#capCount'); if(cc){ cc.textContent=`${t.length}/2200 characters`; cc.classList.toggle('over',t.length>2200) }
+  const hc=$('#hookCount'); if(hc){ const first=(p.caption||'').split('\n')[0]; hc.textContent=first?`hook ${first.length} chars`:''; hc.classList.toggle('over',first.length>125) }
+  clearTimeout(S._rt); S._rt=setTimeout(paintReach,250);
+}
+async function copyCaption(){
+  const p=D(), t=finalCaption(p); if(!t){toast('Nothing to copy yet');return}
+  try{ await navigator.clipboard.writeText(t); toast('Caption copied. Paste it in Instagram.') }
+  catch(_){ const r=document.createRange(); r.selectNodeContents($('#final')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Use your copy shortcut.') }
+}
+async function saveImages(){
+  const p=D(); if(!p.images.length){toast('Add a photo first');return}
+  const btn=$('#saveImgs'); btn.disabled=true; btn.textContent='Rendering…';
+  let cs; try{ cs=await renderSlides(p,1080) }catch(e){ toast('Could not render the slides'); btn.disabled=false; btn.textContent='Save images'; return }
+  const blobs=await Promise.all(cs.map(c=>new Promise(r=>c.toBlob(r,'image/jpeg',.95))));
+  const base=(S.settings.handle||'post')+'_'+new Date().toISOString().slice(0,10);
+  // always show the finished files so long-press "Save to Photos" works on phones
+  const urls=blobs.map(b=>URL.createObjectURL(b));
+  $('#savedImgs').innerHTML=`<div class="saved-imgs">${urls.map((u,i)=>`<img src="${u}" alt="Finished slide ${i+1}">`).join('')}</div>`;
+  $('#saveHint').textContent='On a phone you can also press and hold a slide above to save it to Photos.';
+  if(S.dl){
+    for(let i=0;i<blobs.length;i++){
+      btn.textContent=`Saving ${i+1} of ${blobs.length}…`;
+      try{ await S.dl.save({filename:`${base}_${String(i+1).padStart(2,'0')}.jpg`,data:blobs[i]}) }
+      catch(e){ if(e.code==='declined') break; if(e.code==='rate_limited'){ await new Promise(r=>setTimeout(r,1200)); i--; continue } toast('Saving is not available here. Press and hold the slides instead.'); break }
+    }
+  }
+  btn.disabled=false; btn.textContent='Save images';
+}
+function gcalLink(p){
+  if(!p.scheduledAt) return '';
+  const f=d=>new Date(d).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const title=`Post on Instagram${S.settings.handle?' · @'+S.settings.handle:''}`;
+  const details=(finalCaption(p)||'Caption not written yet').slice(0,1200)+'\n\nAfter posting: share to Story, reply to every comment in the first hour.';
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&dates='+f(p.scheduledAt)+'/'+f(p.scheduledAt+30*60000)+'&details='+encodeURIComponent(details);
+}
+function paintCal(){
+  const p=D(), b=$('#calRow'); if(!b) return;
+  b.innerHTML=p.scheduledAt?`<a class="btn sm" href="${esc(gcalLink(p))}" target="_blank" rel="noopener">Add reminder to Google Calendar ↗</a><span class="muted small">The event carries your caption, so you can copy it from the reminder.</span>`:'';
+}
+function paintChecks(){
+  const p=D(), b=$('#checks'); if(!b) return;
+  const items=[['engage','15 minutes before: reply to a few accounts in your niche'],['story','Share the post to your Story with a sticker'],['replies','Reply to every comment in the first hour'],['pin','Pin the first comment']];
+  p.check=p.check||{};
+  b.innerHTML=`<h3 style="margin:4px 0">Around posting time</h3>`+items.map(([k,l])=>`<label><input type="checkbox" data-ck="${k}" ${p.check[k]?'checked':''}> ${l}</label>`).join('');
+  b.onchange=e=>{const k=e.target.dataset.ck; if(k){p.check[k]=e.target.checked; savePost(p)}};
+  b.classList.toggle('hide',!(p.status==='posted'||p.scheduledAt));
+}
+
+/* ---------- reach check ---------- */
+const SIG_LABEL={watch:'Watch time',sends:'Sends',saves:'Saves',discovery:'Discovery',basics:'Basics'};
+function capSig(p){ return JSON.stringify([p.caption,p.tags,p.firstComment,p.images.map(i=>i.src.slice(-30)),p.format,p.reelBuild&&p.reelBuild.hook]) }
+function inSlot(ts){
+  const d=new Date(ts), mins=d.getHours()*60+d.getMinutes();
+  return (S.settings.slots[d.getDay()]||[]).some(t=>{const [h,m]=t.split(':').map(Number); return Math.abs(h*60+m-mins)<=45});
+}
+function localChecks(p){
+  const out=[], add=(area,signal,rating,note)=>out.push({area,signal,rating,note,local:true});
+  const cap=(p.caption||'').trim(), first=cap.split('\n')[0]||'', n=p.tags.length;
+  add('Hashtags','discovery',n>5?'weak':n>=3?'strong':'ok',n>5?`${n} tags. Instagram allows 5: remove ${n-5}.`:n>=3?`${n} specific tags.`:n?'Add one or two more specific tags (up to 5).':'No hashtags yet. Add 3 to 5 specific ones so search can file the post.');
+  add('Hook length','watch',!first?'weak':first.length<=125?'strong':'ok',!first?'No caption yet.':first.length<=125?`First line shows in full before "more" (${first.length} characters).`:`First line is ${first.length} characters and gets cut near 125.`);
+  add('Invites a reply','sends',/\?/.test(cap)?'strong':'ok',/\?/.test(cap)?'Caption asks a question.':'End with an easy question people can answer in a few words.');
+  const altN=p.images.filter((_,i)=>(p.alt[i]||'').trim()).length;
+  add('Alt text','discovery',altN===p.images.length&&altN?'strong':'ok',altN===p.images.length&&altN?'Every slide has alt text.':`${altN} of ${p.images.length} slides have alt text. It helps search and accessibility.`);
+  add('Location tag','discovery',p.location?'strong':'ok',p.location?`Tag: ${p.location}.`:'Add a location tag; local discovery is easy reach for photo accounts.');
+  if(p.format==='reel'&&p.reelBuild){ const d=reelPlan(p.reelBuild,p.reelBuild.order.length).total;
+    add('Reel length','watch',d<=30?'strong':d<=60?'ok':'weak',`${d.toFixed(1)}s from the builder. Shorter reels are easier to finish and replay.`) }
+  else if(p.format!=='reel') add('Shape','watch',p.ratio==='1:1'?'ok':'strong',p.ratio==='1:1'?'Square uses less of the feed than 3:4 or 4:5.':`${p.ratio} takes up the most screen in the feed.`);
+  const minW=Math.min(...p.images.map(i=>i.w||0));
+  if(p.images.length&&minW<1080) add('Resolution','basics','ok',`A slide is only ${minW}px wide. Export at least 1080px for a crisp post.`);
+  if(p.scheduledAt) add('Posting time','basics',inSlot(p.scheduledAt)?'strong':'ok',inSlot(p.scheduledAt)?`${fmtDT(p.scheduledAt)} is one of your best times.`:`${fmtDT(p.scheduledAt)} is outside your best times in Plan.`);
+  else add('Posting time','basics','ok','Not scheduled yet. "Next best slot" picks one of your best times.');
+  return out;
+}
+function learningsText(){
+  const L=S.settings.learnings; if(!L||!L.patterns) return '';
+  return `${L.headline||''}\n${L.patterns.map(x=>`- ${x.finding} → ${x.action}`).join('\n')}`;
+}
+function rcRow(c,i){
+  const r=c.rating==='strong'?'strong':c.rating==='weak'?'weak':'okay';
+  return `<div class="rc"><span class="dot ${r}"></span><div><span class="area">${esc(c.area)}</span><span class="sig">${esc(SIG_LABEL[c.signal]||c.signal||'')}</span>
+    <div class="muted">${esc(c.note||'')}</div>
+    ${c.fix&&c.rating!=='strong'?`<div class="fix"><b>Fix:</b> ${esc(c.fix)}</div>`:''}
+    ${c.apply&&c.apply.field&&c.rating!=='strong'?`<div style="margin-top:5px"><button class="btn sm" data-apply="${i}">Apply this fix</button></div>`:''}</div></div>`;
+}
+function paintReach(){
+  const p=D(), b=$('#reachCard'); if(!b) return;
+  if(!p.images.length){ b.innerHTML=`<h3>Reach check</h3><p class="muted small" style="margin:0">Add a photo to see how the post lines up with what Instagram ranks on.</p>`; return }
+  const loc=localChecks(p), rc=p.reachCheck, stale=rc&&rc.sig!==capSig(p);
+  const ai=(rc&&Array.isArray(rc.checks))?rc.checks:[];
+  const all=[...ai,...loc], cnt=k=>all.filter(c=>(c.rating==='strong'?'strong':c.rating==='weak'?'weak':'ok')===k).length;
+  b.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Reach check</h3>
+      <div class="rsum"><span class="pill posted">${cnt('strong')} strong</span><span class="pill scheduled">${cnt('ok')} could improve</span>${cnt('weak')?`<span class="pill due">${cnt('weak')} weak</span>`:''}</div></div>
+    <p class="muted small" style="margin:0">Not a virality score. It checks the post against what Instagram says it ranks on: watch time, sends (DM shares), saves and likes per reach.</p>
+    ${S.reachBusy?`<div class="aiwait"><span class="spin"></span>Claude is reviewing the post…</div>`
+      :S.sample?`<div class="row"><button class="btn ${rc?'':'primary'}" id="rcBtn">${rc?'Check again with Claude':'Review with Claude'}</button>${stale?'<span class="small" style="color:var(--amber)">Post changed since the last review.</span>':''}</div>`:''}
+    ${rc&&rc.verdict?`<div class="tip">${esc(rc.verdict)}</div>`:''}
+    ${rc&&rc.trialReel&&p.format==='reel'?`<div class="small"><strong>Trial Reel?</strong> ${esc(rc.trialReel)}</div>`:''}
+    ${ai.length?`<div>${ai.map(rcRow).join('')}</div>`:''}
+    <details ${ai.length?'':'open'}><summary>Quick checks (${loc.length})</summary><div style="margin-top:4px">${loc.map((c,i)=>rcRow(c,'L'+i)).join('')}</div></details>`;
+  $('#rcBtn')&&($('#rcBtn').onclick=runReach);
+  b.onclick=e=>{
+    const a=e.target.closest('[data-apply]'); if(!a) return;
+    const c=ai[+a.dataset.apply]; if(!c||!c.apply) return; applyFix(p,c.apply); c.rating='strong'; c.note='Fixed: '+(c.fix||'applied'); c.apply=null;
+    p.reachCheck.sig=capSig(p); savePost(p); renderEditor($('#main')); toast('Fix applied');
+  };
+}
+function applyFix(p,ap){
+  const v=ap.value;
+  if(ap.field==='hook'){ const lines=(p.caption||'').split('\n'); lines[0]=String(v).split('\n')[0]; p.caption=lines.join('\n') }
+  else if(ap.field==='caption') p.caption=String(v);
+  else if(ap.field==='firstComment') p.firstComment=String(v);
+  else if(ap.field==='hashtags'){ const arr=Array.isArray(v)?v:String(v).split(/[\s,]+/); p.tags=[...new Set(arr.map(x=>normTag(String(x))).filter(Boolean))].slice(0,5) }
+  else if(ap.field==='reelHook'){ B().hook=String(v) }
+}
+async function runReach(){
+  const p=D(); if(!S.sample||S.reachBusy) return;
+  S.reachBusy=true; paintReach();
+  try{
+    const {blobs,labels}=await aiImages(p);
+    const s=S.settings, rb=p.format==='reel'&&p.reelBuild?p.reelBuild:null;
+    const prompt=`You review an Instagram post before it goes live, for a personal photography account. Judge it against what Instagram's head has said drives ranking: watch time (does the first frame and hook stop the scroll; for reels, will people finish and replay), sends per reach (is there a reason to DM it to a friend; this matters most for reaching non-followers), saves (lasting value), likes per reach, and discovery (keywords people search, hashtags, location). Be honest and specific, do not inflate, and never promise virality.
+
+ACCOUNT: niche ${s.niche||'photography'}; city ${s.city||'not given'}; voice ${s.voice}; followers ${s.followers||'unknown'}.
+WHAT HAS WORKED FOR THIS ACCOUNT: ${learningsText()||'no data yet'}
+
+POST
+Format: ${p.format}${p.format==='carousel'?` (${p.images.length} slides${p.fit==='split'?', panorama split':''})`:''}; shape ${slideRatio(p)}
+${rb?`Reel: built as "${rb.template}", ${reelPlan(rb,rb.order.length).total.toFixed(1)}s, on-screen hook "${rb.hook||'(none)'}", end text "${rb.endText||'(none)'}"`:''}
+Caption:
+"""${(p.caption||'(empty)').slice(0,2200)}"""
+Hashtags: ${p.tags.map(t=>'#'+t).join(' ')||'(none)'}
+First comment: ${p.firstComment||'(none)'}
+Location: ${p.location||'(none)'}
+${shotContext(p)}
+Scheduled: ${p.scheduledAt?fmtDT(p.scheduledAt)+(inSlot(p.scheduledAt)?' (one of their best times)':' (outside their best times)'):'not yet'}
+Attached images:
+${labels.join('\n')||'(none)'}
+
+Give 6 to 8 checks. Cover: the first frame as a thumbnail and scroll-stopper, the hook line, send-worthiness, save-worthiness, caption keywords, and ${p.format==='reel'?'the ending and whether it loops':p.format==='carousel'?'slide order and whether the last slide pays off':'whether the photo reads at phone size'}. Rate each "strong", "ok" or "weak". For anything not strong, give one concrete fix. Where a fix is a text change, include "apply" with the full replacement: field "hook" (one line), "caption" (whole caption, only for a substantial rewrite), "firstComment", "hashtags" (array of up to 5 lowercase tags without #)${rb?', or "reelHook" (on-screen hook, max 7 words)':''}. Otherwise "apply" is null.
+"trialReel": ${p.format==='reel'?'one sentence on whether to post this as a Trial Reel first (Instagram offers Trial Reels to public accounts with 1,000+ followers; say so if follower count is below or unknown)':'empty string'}.
+
+Reply with only JSON:
+{"verdict":"one honest sentence","checks":[{"area":"","signal":"watch|sends|saves|discovery","rating":"strong|ok|weak","note":"","fix":"","apply":null}],"trialReel":""}`;
+    const r=await S.sample.json(prompt,{images:blobs,cache:false});
+    if(!r||!Array.isArray(r.checks)) throw {code:'invalid_json'};
+    p.reachCheck={at:Date.now(),sig:capSig(p),verdict:String(r.verdict||''),trialReel:String(r.trialReel||''),
+      checks:r.checks.slice(0,9).map(c=>({area:String(c.area||''),signal:String(c.signal||''),rating:String(c.rating||'ok'),note:String(c.note||''),fix:String(c.fix||''),apply:c.apply&&typeof c.apply==='object'&&c.apply.field?{field:String(c.apply.field),value:c.apply.value}:null}))};
+    savePost(p);
+  }catch(e){
+    const msg={not_granted:'Claude was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached.',invalid_json:'The review came back garbled. Try again.'}[e&&e.code];
+    toast(msg||'Something went wrong. Try again.');
+    if(e&&['not_granted','sampling_disabled'].includes(e.code)) S.sample=null;
+  }
+  S.reachBusy=false; paintReach();
+}
+
+/* ---------- results ---------- */
+const RFIELDS=[['views','Views'],['reach','Accounts reached'],['likes','Likes'],['comments','Comments'],['sends','Shares (sends)'],['saves','Saves'],['follows','Follows'],['watch','Avg watch time (s)']];
+function rates(p){
+  const r=p.results||{}, base=+r.reach||+r.views||0, pc=k=>base&&r[k]!==''&&r[k]!=null?(+r[k]/base*100):null;
+  return {base,sends:pc('sends'),saves:pc('saves'),likes:pc('likes'),follows:pc('follows'),watch:r.watch!==''&&r.watch!=null?+r.watch:null};
+}
+const fmtPc=v=>v==null||isNaN(v)?'–':(v>=10?v.toFixed(0):v.toFixed(1))+'%';
+function resultsForm(p){
+  const r=p.results||{};
+  return `<div data-rform="${p.id}"><div class="rform">${RFIELDS.filter(([k])=>k!=='watch'||p.format==='reel').map(([k,l])=>`<label>${l}<input type="number" min="0" step="${k==='watch'?'0.1':'1'}" inputmode="decimal" data-rf="${k}" value="${r[k]??''}"></label>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn sm primary" data-rsave="${p.id}">Save numbers</button><span class="muted small">Instagram: open the post → View insights. Best logged 2 to 7 days after posting.</span></div></div>`;
+}
+function readResults(root){
+  const o={}; $$('[data-rf]',root).forEach(i=>{ o[i.dataset.rf]=i.value===''?'':+i.value }); o.loggedAt=Date.now(); return o;
+}
+function paintResCard(){
+  const p=D(), b=$('#resCard'); if(!b) return;
+  if(p.status!=='posted'){b.classList.add('hide');return}
+  b.classList.remove('hide');
+  const rt=p.results?rates(p):null;
+  b.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Results</h3>${rt&&rt.base?`<span class="mono muted">sends ${fmtPc(rt.sends)} · saves ${fmtPc(rt.saves)} of reach</span>`:''}</div>${resultsForm(p)}`;
+  b.onclick=e=>{const s=e.target.closest('[data-rsave]'); if(!s) return; p.results=readResults(b); savePost(p); paintResCard(); toast('Results saved')};
+}
+
+/* ---------- AI ---------- */
+function recentHooks(){ return [...S.posts.values()].filter(x=>x.caption&&x.id!==D().id).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,4).map(x=>x.caption.split('\n')[0]) }
+async function aiImages(p){
+  const lim=await S.sample.limits().catch(()=>null);
+  if(!(lim&&lim.images)) return {blobs:undefined,labels:[]};
+  const max=Math.min(lim.images.maxCount||6,12);
+  const items=[];
+  p.images.forEach((im,i)=>{
+    if(im.frames&&im.frames.length) im.frames.forEach(f=>items.push({src:f.src,label:`slide ${i+1} is a video clip${im.exif.duration?' of '+im.exif.duration.toFixed(1)+'s':''}; frame at ${f.t}s`}));
+    else items.push({src:im.src,label:`slide ${i+1}, ${im.exif&&im.exif.video?'video cover frame':'photo'}`});
+  });
+  let pick=items;
+  if(items.length>max){ const step=items.length/max; pick=Array.from({length:max},(_,k)=>items[Math.floor(k*step)]) }
+  const blobs=[];
+  for(const it of pick){ try{ const s=await getImg(it.src); blobs.push((await toJpeg(s,1024,.85)).blob) }catch(_){ blobs.push(null) } }
+  const keep=pick.filter((_,k)=>blobs[k]);
+  return {blobs:blobs.filter(Boolean),labels:keep.map((it,k)=>`Image ${k+1}: ${it.label}`)};
+}
+function buildPrompt(p,labels=[]){
+  const s=S.settings, n=p.images.length, reel=p.format==='reel', car=p.format==='carousel';
+  const ex=p.images.map((im,i)=>`Slide ${i+1}: ${exifParts(im.exif).join(', ')||'no camera data'}`).join('\n');
+  return `You write Instagram posts for a photographer's personal photography account (an Instagram Business account in the "Personal Blog" category). The goal is real reach and engagement in 2026 without sounding like a marketer.
+
+ACCOUNT
+Handle: ${s.handle?'@'+s.handle:'not set'}
+Niche: ${s.niche||'photography (infer from the images)'}
+Home city: ${s.city||'not given'}
+Caption voice: ${s.voice}
+Language(s): ${s.language||'English'}
+What has worked for this account so far (from their own results; lean into it): ${learningsText()||'no data yet'}
+
+THIS POST
+Format: ${reel?'Reel (vertical video; the attached image is its cover frame)':car?`Carousel of ${n} slides${p.fit==='split'?' (one panorama split into seamless slides)':''}`:'Single photo'}
+Photographer's notes: ${p.notes||'(none; describe from the image without inventing facts like names or exact places)'}
+Location: ${p.location||'(not given)'}
+${shotContext(p)}
+Camera data:
+${ex}
+Openers used recently (do not repeat their pattern): ${recentHooks().map(h=>'"'+h+'"').join('; ')||'none'}
+Attached images:
+${labels.join('\n')||'(none)'}
+For video clips you see several frames across the clip: use them to understand the motion and story.
+
+RULES
+- Instagram allows at most 5 hashtags per post. Return exactly 5, lowercase, without "#": 1 photography-genre tag, 2 subject or style tags, 2 place or community tags. Never use #explore, #viral, #reels, #instagood, #photooftheday or similar spam tags.
+- Instagram search reads captions: weave in the plain words people search (subject, place, genre) naturally.
+- "caption": the first line is the hook (under 110 characters, makes people tap "more", no hashtags). Then 2 to 4 short paragraphs, honest and specific to what is in the photo, at most 2 emoji, ending with one easy question that invites a comment. Do not include hashtags, camera settings or a signature; they are added separately. Under 1100 characters. Use line breaks between paragraphs.
+- "hooks": 3 alternative first lines in different styles (curiosity, story, observation). The first one must equal the caption's first line.
+- "altText": one plain description per slide, under 120 characters each, ${n} items.
+- "firstComment": one short comment to pin (a behind-the-shot detail or a question).
+- "reel": ${reel?'{"onScreenHooks": 3 options of at most 7 words for the first 2 seconds, "beats": 3 to 5 edit beats with rough seconds, "audioMood": the mood and tempo of audio to search for in Instagram\'s library (do not name specific copyrighted songs), "coverText": at most 4 words}':'null'}
+- "carouselOrder": ${car&&p.fit!=='split'?'{"order": 1-based slide numbers with the strongest scroll-stopper first and a satisfying last slide, "reason": one sentence}':'null'}
+- "tips": 2 short tips specific to this post (for example a collab or location tag, a Story idea, a community to share with).
+
+Reply with only this JSON:
+{"hooks":["",""," "],"caption":"","hashtags":["","","","",""],"altText":[""],"firstComment":"","reel":null,"carouselOrder":null,"tips":["",""]}`;
+}
+async function runAI(){
+  const p=D(); if(!S.sample||!p.images.length||S.aiBusy) return;
+  S.aiBusy=true; S.aiCtl=new AbortController(); refreshAICard();
+  try{
+    const {blobs:images,labels}=await aiImages(p);
+    const prompt=buildPrompt(p,labels)+(images?'':'\n(Images could not be attached; rely on the notes and camera data.)');
+    const r=await S.sample.json(prompt,{images,signal:S.aiCtl.signal,cache:false,onText:()=>{const m=$('#aiMsg'); if(m) m.textContent='Writing…'}});
+    if(!r||typeof r!=='object') throw {code:'invalid_json'};
+    if(typeof r.caption==='string') p.caption=r.caption.trim();
+    if(Array.isArray(r.hooks)) p.hooks=r.hooks.filter(x=>typeof x==='string'&&x.trim()).slice(0,3);
+    if(Array.isArray(r.hashtags)) p.tags=[...new Set(r.hashtags.map(x=>normTag(String(x))).filter(Boolean))].slice(0,5);
+    if(Array.isArray(r.altText)) p.alt=p.images.map((_,i)=>String(r.altText[i]||p.alt[i]||''));
+    if(typeof r.firstComment==='string') p.firstComment=r.firstComment;
+    p.reel=r.reel&&typeof r.reel==='object'?r.reel:null;
+    p.carousel=r.carouselOrder&&typeof r.carouselOrder==='object'?r.carouselOrder:null;
+    p.tips=Array.isArray(r.tips)?r.tips.filter(x=>typeof x==='string').slice(0,3):[];
+    savePost(p);
+    S.aiBusy=false; renderEditor($('#main')); toast('Draft ready. Make it yours.');
+    return;
+  }catch(e){
+    const msg={cancelled:'',not_granted:'Claude drafting was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached. Try again in a bit.',invalid_json:'The draft came back garbled. Try again.',image_rejected:'One of the images could not be sent. Try fewer slides.',refused:'Claude could not write a caption for this one.',session_expired:'Sign in to Claude again, then retry.'}[e&&e.code];
+    if(msg!=='') toast(msg||'Something went wrong. Try again.');
+    if(e&&['not_granted','sampling_disabled','capability_disabled','capability_removed','not_declared'].includes(e.code)) S.sample=null;
+  }
+  S.aiBusy=false; refreshAICard();
+}
+function templateDraft(){
+  const p=D(), s=S.settings;
+  const place=p.location||s.city||'';
+  const first=(p.notes||'').split(/[.!?\n]/)[0].trim();
+  const hook=first?first.charAt(0).toUpperCase()+first.slice(1):(place?`A moment from ${place}`:'A frame I keep coming back to');
+  p.caption=`${hook}\n\n${p.notes&&p.notes.trim()!==first?p.notes.trim()+'\n\n':''}What would you have noticed first here?`;
+  const bank=(s.tagBank||'').split(/[\s,]+/).map(normTag).filter(Boolean);
+  if(!p.tags.length) p.tags=[...new Set([...bank,normTag(place)].filter(Boolean))].slice(0,5);
+  savePost(p); renderEditor($('#main'));
+}
+
+/* ---------- scheduling ---------- */
+function nextFreeSlot(exceptId){
+  const taken=new Set([...S.posts.values()].filter(x=>x.id!==exceptId&&x.scheduledAt&&x.status!=='posted').map(x=>new Date(x.scheduledAt).toDateString()));
+  const now=Date.now()+30*60000;
+  for(let d=0;d<21;d++){
+    const day=new Date(); day.setHours(0,0,0,0); day.setDate(day.getDate()+d);
+    if(taken.has(day.toDateString())) continue;
+    for(const t of [...(S.settings.slots[day.getDay()]||[])].sort()){
+      const [h,mi]=t.split(':').map(Number); const at=new Date(day); at.setHours(h,mi,0,0);
+      if(at.getTime()>now) return at.getTime();
+    }
+  }
+  return null;
+}
+function weekStart(ts){const d=new Date(ts);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getTime()}
+
+/* ---------- grid view ---------- */
+function gridOrder(){
+  const all=[...S.posts.values()].filter(p=>p.images&&p.images.length);
+  const drafts=all.filter(p=>p.status==='draft'&&!p.scheduledAt).sort((a,b)=>b.order-a.order);
+  const sched=all.filter(p=>p.status!=='posted'&&p.scheduledAt).sort((a,b)=>b.scheduledAt-a.scheduledAt);
+  const posted=all.filter(p=>p.status==='posted').sort((a,b)=>(b.postedAt||b.scheduledAt||0)-(a.postedAt||a.scheduledAt||0));
+  return {drafts,sched,posted};
+}
+function renderGrid(m){
+  const {drafts,sched,posted}=gridOrder(), s=S.settings;
+  const list=[...(S.showDrafts?drafts:[]),...sched,...posted];
+  m.innerHTML=`${localBanner()}<div class="view-head"><div><h2>Your grid, ahead of time</h2><p class="muted small">Newest at top left, exactly as your profile will show it. Tiles are the 3:4 crop Instagram uses.</p></div>
+    <div class="row"><label class="small row" style="gap:6px"><input type="checkbox" id="shD" ${S.showDrafts?'checked':''}> Show drafts</label>
+    <button class="btn sm ${S.reorder?'ink':''}" id="reo">${S.reorder?'Done reordering':'Reorder'}</button></div></div>
+  <div class="grid-wrap">
+    <div>
+      <div class="profile-head"><div class="avatar" aria-hidden="true"></div><div><div style="font-weight:700">${s.handle?'@'+esc(s.handle):'Set your handle in Profile'}</div><div class="muted small">${esc(s.niche||'Personal blog')} · ${posted.length} posted here · ${sched.length} queued</div></div></div>
+      ${S.reorder?`<p class="banner" style="margin:0 0 10px">Tap one upcoming tile, then another, to swap their dates. Posted tiles stay put.</p>`:''}
+      ${list.length?`<div class="ig" id="ig">${list.map(p=>`<button class="tile ${p.status==='posted'?'past':''} ${S.sel===p.id?'sel':''}" data-id="${p.id}" aria-label="${esc((p.caption||'Untitled').split('\n')[0])}"><img data-th="${p.id}" alt=""><span class="b">${statusPill(p)}</span>${p.format==='carousel'?'<span class="ic">❐</span>':p.format==='reel'?'<span class="ic">▶</span>':''}</button>`).join('')}</div>`:`<div class="card empty">No posts yet. Create one, or add photos you have already posted so you can plan around them.</div>`}
+    </div>
+    <div class="stack">
+      <div class="card stack"><h3>Already on Instagram?</h3><p class="small" style="margin:0">Add your last 6 to 12 posted photos so new posts are planned against your real feed. Pick them newest first.</p><div><button class="btn" id="addPast">Add posted photos</button></div></div>
+      <div class="card stack"><h3>Grid habits that grow photo accounts</h3>
+        <div class="tip">Keep a consistent edit: one or two presets across a week reads as a body of work.</div>
+        <div class="tip">Alternate busy and quiet frames, and close-ups with wide scenes, so tiles breathe.</div>
+        <div class="tip">Use the grid's 3:4 shape: shoot and crop tall so nothing important is cut from the tile.</div></div>
+    </div>
+  </div>`;
+  $('#shD').onchange=e=>{S.showDrafts=e.target.checked;renderGrid(m)};
+  $('#reo').onclick=()=>{S.reorder=!S.reorder;S.sel=null;renderGrid(m)};
+  $('#addPast').onclick=()=>$('#pastPick').click();
+  $('#ig')&&($('#ig').onclick=e=>{
+    const t=e.target.closest('.tile'); if(!t) return; const p=S.posts.get(t.dataset.id); if(!p) return;
+    if(!S.reorder){openPost(p.id);return}
+    if(p.status==='posted'){toast('Posted tiles cannot move');return}
+    if(!S.sel){S.sel=p.id;renderGrid(m);return}
+    if(S.sel===p.id){S.sel=null;renderGrid(m);return}
+    const a={...S.posts.get(S.sel)}, b={...p};
+    [a.scheduledAt,b.scheduledAt]=[b.scheduledAt,a.scheduledAt]; [a.order,b.order]=[b.order,a.order];
+    a.status=a.scheduledAt?'scheduled':'draft'; b.status=b.scheduledAt?'scheduled':'draft';
+    savePost(a); savePost(b); S.sel=null; renderGrid(m); toast('Swapped');
+  });
+  $$('[data-th]').forEach(async img=>{const p=S.posts.get(img.dataset.th); try{img.src=await gridThumb(p)}catch(_){}});
+}
+$('#filePick').onchange=e=>{const fs=[...e.target.files]; e.target.value=''; addFiles(fs)};
+$('#pastPick').onchange=async e=>{
+  const files=[...e.target.files]; e.target.value=''; if(!files.length) return;
+  toast(`Adding ${files.length} posted photo${files.length>1?'s':''}…`);
+  const base=Date.now();
+  for(let i=0;i<files.length;i++){
+    try{
+      const im=await ingestFile(files[i],1440);
+      const p=newDraft(); p.images=[im]; p.status='posted'; p.postedAt=base-(i+1)*86400000; p.imported=true; p.caption='';
+      savePost(p);
+    }catch(_){ toast(files[i].name+' could not be read') }
+  }
+  if(S.view==='grid') render(); toast('Added to your grid');
+};
+
+/* ---------- plan view ---------- */
+function renderPlan(m){
+  const all=[...S.posts.values()], s=S.settings, now=Date.now();
+  const ws=weekStart(now);
+  const postedWeek=all.filter(p=>p.status==='posted'&&(p.postedAt||0)>=ws).length;
+  const queued=all.filter(p=>p.status!=='posted'&&p.scheduledAt).sort((a,b)=>a.scheduledAt-b.scheduledAt);
+  const drafts=all.filter(p=>p.status==='draft'&&!p.scheduledAt&&p.images?.length).sort((a,b)=>b.updatedAt-a.updatedAt);
+  let streak=0; for(let w=1;w<=52;w++){const a=ws-w*7*86400000,b=a+7*86400000; if(all.some(p=>p.status==='posted'&&p.postedAt>=a&&p.postedAt<b))streak++; else break}
+  if(postedWeek) streak++;
+  const goal=Math.max(1,+s.goal||4);
+  const byDay={}; for(const p of queued){const k=new Date(p.scheduledAt).toDateString();(byDay[k]=byDay[k]||[]).push(p)}
+  for(const p of all.filter(x=>x.status==='posted'&&x.postedAt&&x.postedAt>=now-86400000*1)){const k=new Date(p.postedAt).toDateString();(byDay[k]=byDay[k]||[]).push(p)}
+  const days=[]; for(let d=0;d<14;d++){const day=new Date();day.setHours(0,0,0,0);day.setDate(day.getDate()+d);days.push(day)}
+  const nxt=queued.find(p=>p.scheduledAt>now)||queued[0];
+  m.innerHTML=`${localBanner()}<div class="view-head"><div><h2>Plan</h2><p class="muted small">Times are your local time. Steady beats sporadic: the same few slots each week train your followers to expect you.</p></div></div>
+  <div class="stats" style="margin-bottom:16px">
+    <div class="card stat"><div class="v">${postedWeek}<span class="muted" style="font-size:20px"> / ${goal}</span></div><div class="l">Posted this week</div><div class="bar"><i style="width:${Math.min(100,postedWeek/goal*100)}%"></i></div></div>
+    <div class="card stat"><div class="v">${queued.length}</div><div class="l">In the queue${nxt?` · next <span class="mono">${fmtDT(nxt.scheduledAt)}</span>`:''}</div></div>
+    <div class="card stat"><div class="v">${streak}</div><div class="l">Week streak</div></div>
+  </div>
+  <h3 style="margin-bottom:8px">Next 14 days</h3>
+  <div class="days" style="margin-bottom:18px">${days.map(day=>{const k=day.toDateString(), ps=byDay[k]||[], slots=s.slots[day.getDay()]||[]; const isToday=day.toDateString()===new Date().toDateString();
+    return `<div class="day ${isToday?'today':''}"><div class="d">${isToday?'Today':DAYS[day.getDay()]} ${day.getDate()}</div>
+    ${ps.map(p=>`<button class="slot filled" data-open="${p.id}"><img data-th="${p.id}" alt=""><span class="mono">${pad2(new Date(p.scheduledAt||p.postedAt).getHours())}:${pad2(new Date(p.scheduledAt||p.postedAt).getMinutes())}</span></button>`).join('')}
+    ${ps.length?'':slots.map(t=>`<span class="slot">${t}</span>`).join('')}</div>`}).join('')}</div>
+  <div class="two">
+    <div class="card"><h3 style="margin-bottom:6px">Queue</h3>${queued.length?queued.map(p=>qItem(p,true)).join(''):'<div class="empty">Nothing scheduled. Pick a draft below or create a post.</div>'}
+      ${drafts.length?`<h3 style="margin:14px 0 6px">Drafts</h3>`+drafts.map(p=>qItem(p,false)).join(''):''}</div>
+    <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:4px"><h3>Your best times</h3><button class="btn sm ghost" id="resetSlots">Reset</button></div>
+      <p class="small muted" style="margin:0 0 8px">Starter times for an Indian audience. Replace them with yours: Instagram → Professional dashboard → Total followers → Most active times.</p>
+      ${[1,2,3,4,5,6,0].map(d=>`<div class="wk"><span class="mono">${DAYS[d]}</span><div class="chips">${(s.slots[d]||[]).slice().sort().map((t,i)=>`<span class="tchip">${t}<button data-rs="${d}|${t}" aria-label="Remove ${DAYS[d]} ${t}">×</button></span>`).join('')}<input type="time" data-as="${d}" aria-label="Add time for ${DAYS[d]}"></div></div>`).join('')}
+      <label class="f" style="margin-top:10px;max-width:220px" for="goalIn">Weekly goal <input type="number" id="goalIn" min="1" max="21" value="${goal}"></label>
+    </div>
+  </div>
+  ${resultsSection(all)}`;
+  m.onclick=e=>{
+    const o=e.target.closest('[data-open]'); if(o){openPost(o.dataset.open);return}
+    const ns=e.target.closest('[data-ns]'); if(ns){const p={...S.posts.get(ns.dataset.ns)}; const t=nextFreeSlot(p.id); if(!t){toast('No free slot. Add times on the right.');return} p.scheduledAt=t; savePost(p); renderPlan(m); toast('Scheduled for '+fmtDT(t)); return}
+    const mp=e.target.closest('[data-mp]'); if(mp){const p={...S.posts.get(mp.dataset.mp)}; p.status='posted'; p.postedAt=Date.now(); savePost(p); renderPlan(m); toast('Marked as posted'); return}
+    const rs=e.target.closest('[data-rs]'); if(rs){const [d,t]=rs.dataset.rs.split('|'); s.slots[d]=(s.slots[d]||[]).filter(x=>x!==t); saveSettings(); renderPlan(m); return}
+    if(e.target.id==='resetSlots'){s.slots=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.slots)); saveSettings(); renderPlan(m)}
+    const lg=e.target.closest('[data-rlog]'); if(lg){ S.openResult=S.openResult===lg.dataset.rlog?null:lg.dataset.rlog; renderPlan(m); const f=$(`[data-rform="${lg.dataset.rlog}"] input`); f&&f.focus(); return }
+    const sv=e.target.closest('[data-rsave]'); if(sv){ const p={...S.posts.get(sv.dataset.rsave)}; p.results=readResults(sv.closest('[data-rform]')); savePost(p); S.openResult=null; renderPlan(m); toast('Results saved'); return }
+    if(e.target.id==='learnBtn') runLearnings(m);
+  };
+  $$('[data-as]').forEach(inp=>inp.onchange=()=>{const d=inp.dataset.as, v=inp.value; if(!v) return; s.slots[d]=[...new Set([...(s.slots[d]||[]),v])]; saveSettings(); renderPlan(m)});
+  $('#goalIn').onchange=e=>{s.goal=clamp(+e.target.value||4,1,21); saveSettings(); renderPlan(m)};
+  $$('[data-th]').forEach(async img=>{const p=S.posts.get(img.dataset.th); try{img.src=await gridThumb(p)}catch(_){}});
+}
+function resultsSection(all){
+  const now=Date.now(), L=S.settings.learnings;
+  const posted=all.filter(p=>p.status==='posted'&&!p.imported&&p.postedAt);
+  const due=posted.filter(p=>!p.results&&now-p.postedAt>36*3600000).sort((a,b)=>a.postedAt-b.postedAt);
+  const logged=posted.filter(p=>p.results&&rates(p).base).map(p=>({p,r:rates(p)})).sort((a,b)=>(b.r.sends??-1)-(a.r.sends??-1)||(b.r.saves??-1)-(a.r.saves??-1));
+  const fmtName=p=>p.format==='reel'?'Reel'+(p.reelBuild?` · ${(TEMPLATES.find(t=>t[0]===p.reelBuild.template)||['',''])[1]}`:''):p.format==='carousel'?'Carousel':'Photo';
+  return `<div class="card stack" style="margin-top:16px" id="resultsCard">
+    <div class="row" style="justify-content:space-between"><h3>Results · what's actually working</h3><span class="muted small">${logged.length} post${logged.length===1?'':'s'} logged</span></div>
+    ${due.length?`<div class="banner" style="margin:0">${due.length} post${due.length>1?'s are':' is'} ready for numbers. Two minutes each; this is how the tool learns what works for you.</div>`:''}
+    ${due.map(p=>`<div class="qitem"><img data-th="${p.id}" alt=""><div class="meta"><div class="t">${esc((p.caption||'Untitled').split('\n')[0])}</div><span class="mono muted">Posted ${fmtDT(p.postedAt)}</span>
+      ${S.openResult===p.id?resultsForm(p):''}</div>${S.openResult===p.id?'':`<button class="btn sm primary" data-rlog="${p.id}">Log</button>`}</div>`).join('')}
+    ${logged.length?`<div class="scroll-x"><table class="rtable"><thead><tr><th>Post</th><th>Reach</th><th>Sends</th><th>Saves</th><th>Likes</th><th>Follows</th><th>Watch</th><th></th></tr></thead><tbody>
+      ${logged.map((x,i)=>`<tr class="${i<3&&logged.length>=4?'top':''}"><td><div class="pc"><img data-th="${x.p.id}" alt=""><span>${fmtName(x.p)}<br><span class="muted">${new Date(x.p.postedAt).toLocaleDateString('en',{day:'numeric',month:'short'})}</span></span></div></td><td>${x.r.base.toLocaleString('en-IN')}</td><td>${fmtPc(x.r.sends)}</td><td>${fmtPc(x.r.saves)}</td><td>${fmtPc(x.r.likes)}</td><td>${fmtPc(x.r.follows)}</td><td>${x.r.watch!=null?x.r.watch+'s':'–'}</td><td><button class="btn sm ghost" data-rlog="${x.p.id}">Edit</button></td></tr>
+      ${S.openResult===x.p.id?`<tr><td colspan="8" style="text-align:left;font-family:var(--body)">${resultsForm(x.p)}</td></tr>`:''}`).join('')}
+    </tbody></table></div><p class="muted small" style="margin:0">Rates are per account reached, sorted by sends then saves. Green rows are your top three.</p>`:`<p class="muted small" style="margin:0">After you mark posts as posted, they show up here for their numbers two days later.</p>`}
+    ${L&&L.patterns?`<div class="stack" style="gap:8px;margin-top:4px"><h3>What Claude sees in your numbers <span class="mono" style="text-transform:none;letter-spacing:0">· ${L.n} posts · ${new Date(L.at).toLocaleDateString('en',{day:'numeric',month:'short'})}</span></h3>
+      ${L.headline?`<div class="tip">${esc(L.headline)}</div>`:''}
+      ${L.patterns.map(x=>`<div class="small"><strong>${esc(x.finding)}</strong>${x.evidence?` <span class="muted">${esc(x.evidence)}</span>`:''}<br>→ ${esc(x.action)}</div>`).join('')}
+      ${L.tryNext&&L.tryNext.length?`<div class="small"><strong>Try next:</strong><ul style="margin:4px 0 0;padding-left:20px">${L.tryNext.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`:''}
+      ${L.caution?`<p class="muted small" style="margin:0">${esc(L.caution)}</p>`:''}
+      <p class="muted small" style="margin:0">Captions and reach checks now use these findings.</p></div>`:''}
+    ${S.sample&&logged.length>=3?`<div class="row"><button class="btn ${L?'':'primary'}" id="learnBtn" ${S.learnBusy?'disabled':''}>${S.learnBusy?'Reading your numbers…':L?'Update findings':'Ask Claude what\'s working'}</button>${logged.length<8?`<span class="muted small">Patterns firm up after about 8 posts.</span>`:''}</div>`:logged.length&&logged.length<3?`<p class="muted small" style="margin:0">Log ${3-logged.length} more to ask Claude for patterns.</p>`:''}
+  </div>`;
+}
+async function runLearnings(m){
+  if(!S.sample||S.learnBusy) return;
+  const rows=[...S.posts.values()].filter(p=>p.status==='posted'&&!p.imported&&p.results&&rates(p).base).sort((a,b)=>a.postedAt-b.postedAt);
+  S.learnBusy=true; renderPlan(m);
+  const line=p=>{const r=rates(p), d=new Date(p.postedAt), R=p.results;
+    return `${d.toISOString().slice(0,10)} ${DAYS[d.getDay()]} ${pad2(d.getHours())}:00 | ${p.format}${p.format==='reel'&&p.reelBuild?'/'+p.reelBuild.template:''}${p.format==='carousel'?'/'+p.images.length+' slides':''} | ${slideRatio(p)} | hook: "${(p.caption||'').split('\n')[0].slice(0,90)}" | tags: ${p.tags.join(' ')} | reach ${r.base} | views ${R.views||'?'} | watch ${r.watch??'?'}s | likes ${fmtPc(r.likes)} | comments ${R.comments??'?'} | saves ${fmtPc(r.saves)} | sends ${fmtPc(r.sends)} | follows ${R.follows??'?'}`};
+  const prompt=`You analyse Instagram results for a personal photography account to find what works for this specific account. Use only the data below. Rates are per account reached. Compare the best posts with the weakest and look at format, reel style, hook style, subject, hashtags, day and hour. With fewer than 8 posts, say the patterns are tentative. Do not invent numbers.
+
+ACCOUNT: niche ${S.settings.niche||'photography'}; city ${S.settings.city||'not given'}; followers ${S.settings.followers||'unknown'}.
+POSTS (oldest first):
+${rows.map(line).join('\n')}
+
+Reply with only JSON:
+{"headline":"one sentence","patterns":[{"finding":"","evidence":"which posts or numbers show it","action":"what to do next"}],"tryNext":["three concrete experiments for the next posts"],"caution":"one line on how much data this is"}
+Give 2 to 4 patterns.`;
+  try{
+    const r=await S.sample.json(prompt,{cache:false});
+    if(!r||!Array.isArray(r.patterns)) throw {code:'invalid_json'};
+    S.settings.learnings={at:Date.now(),n:rows.length,headline:String(r.headline||''),patterns:r.patterns.slice(0,5).map(x=>({finding:String(x.finding||''),evidence:String(x.evidence||''),action:String(x.action||'')})),tryNext:(r.tryNext||[]).map(String).slice(0,4),caution:String(r.caution||'')};
+    saveSettings();
+  }catch(e){ toast({rate_limited:'Claude is busy or your usage limit was reached.',invalid_json:'That came back garbled. Try again.'}[e&&e.code]||'Something went wrong. Try again.') }
+  S.learnBusy=false; if(S.view==='plan') renderPlan(m);
+}
+function qItem(p,queued){
+  const due=queued&&p.scheduledAt<Date.now();
+  const title=(p.caption||p.notes||'Untitled').split('\n')[0];
+  return `<div class="qitem"><img data-th="${p.id}" alt=""><div class="meta"><div class="t">${esc(title)}</div>
+    <div class="row" style="gap:6px;margin-top:3px">${statusPill(p)}${p.scheduledAt?`<span class="mono muted">${fmtDT(p.scheduledAt)}</span>`:''}</div></div>
+    <div class="row" style="gap:6px;flex-direction:column;align-items:stretch">
+      <button class="btn sm" data-open="${p.id}">Open</button>
+      ${queued?(due?`<button class="btn sm primary" data-mp="${p.id}">Posted</button>`:`<a class="btn sm ghost" href="${esc(gcalLink(p))}" target="_blank" rel="noopener">Remind ↗</a>`):`<button class="btn sm" data-ns="${p.id}">Next slot</button>`}
+    </div></div>`;
+}
+
+/* ---------- reels: renderer ---------- */
+const TEMPLATES=[['dump','Photo dump'],['kenburns','Slow pans'],['pan','Panorama pan'],['beforeafter','Before / after'],['settings','Settings reveal']];
+const TPL_KEYS=TEMPLATES.map(t=>t[0]);
+const TPL_HELP={dump:'Quick cuts, one photo per beat with a small punch-in. Best with 6+ photos.',kenburns:'Slow push and drift with soft crossfades. Calm, cinematic; good for 3 to 8 photos.',pan:'One wide photo, panned left to right. Made for panoramas.',beforeafter:'Slides in pairs: raw first, edited second, revealed with a wipe. Put the RAW export before the final.',settings:'Each photo with its camera settings typing on. Photographers love it; it invites "what lens?" comments.'};
+function defaultBuild(p){
+  const one=p.images.length===1, wide=one&&p.images[0].w/p.images[0].h>1.6;
+  return {template:wide?'pan':one?'kenburns':p.images.length>5?'dump':'kenburns',fit:'fill',sps:p.images.length>5?0.8:2,bpm:'',beats:2,hook:'',endText:S.settings.handle?'@'+S.settings.handle:'',order:p.images.map((_,i)=>i+1)};
+}
+function B(){
+  const p=D(); if(!p.reelBuild) p.reelBuild=defaultBuild(p);
+  const b=p.reelBuild, n=p.images.length;
+  let o=(b.order||[]).map(Number).filter(x=>x>=1&&x<=n); if(!o.length) o=p.images.map((_,i)=>i+1); b.order=o;
+  if(!TPL_KEYS.includes(b.template)) b.template='kenburns';
+  return b;
+}
+function reelPlan(b,n){
+  const sps=clamp(+b.sps||1.5,0.25,6);
+  if(b.template==='pan') return {total:clamp(sps*4,5,20),sps};
+  if(b.template==='beforeafter'){ const pairs=Math.max(1,Math.floor(n/2)); return {total:pairs*sps*2.4,pairs,sps} }
+  return {total:Math.max(1,n)*sps,sps};
+}
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const blurCache=new Map();
+function blurBg(it){
+  let c=blurCache.get(it.im.src); if(c) return c;
+  c=cv(27,48); coverDraw(c.getContext('2d'),it.img,{...it.im,fx:.5,fy:.5},27,48); blurCache.set(it.im.src,c); return c;
+}
+function drawPhoto(x,W,H,it,scale,px,py,fit,alpha=1){
+  const {img,im}=it; x.save(); x.globalAlpha=alpha;
+  if(fit==='frame'){
+    x.imageSmoothingEnabled=true; x.drawImage(blurBg(it),-W*.06,-H*.06,W*1.12,H*1.12); x.fillStyle='rgba(0,0,0,.28)'; x.fillRect(0,0,W,H);
+    const s=Math.min(W/im.w,H/im.h)*.9*scale, dw=im.w*s, dh=im.h*s; x.drawImage(img,(W-dw)/2+px*W*.02,(H-dh)/2+py*H*.02,dw,dh);
+  } else {
+    const s=Math.max(W/im.w,H/im.h)*scale, dw=im.w*s, dh=im.h*s;
+    const ox=clamp(W/2-im.fx*dw+px*(dw-W)*.5,W-dw,0), oy=clamp(H/2-im.fy*dh+py*(dh-H)*.5,H-dh,0);
+    x.drawImage(img,ox,oy,dw,dh);
+  }
+  x.restore();
+}
+function rrect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+function textBox(x,W,H,text,cy,size,mono,alpha=1){
+  if(!text||alpha<=0) return;
+  const fs=size*W/1080; x.save(); x.globalAlpha=alpha;
+  x.font=mono?`500 ${fs}px "JetBrains Mono", monospace`:`700 ${fs}px Manrope, system-ui, sans-serif`;
+  const maxW=W*.8, lines=[]; let line='';
+  for(const w of String(text).split(/\s+/)){ const t=line?line+' '+w:w; if(x.measureText(t).width>maxW&&line){lines.push(line);line=w} else line=t }
+  if(line) lines.push(line);
+  const lh=fs*1.25, bh=lines.length*lh+fs*.8, bw=Math.max(...lines.map(l=>x.measureText(l).width))+fs*1.2, top=cy-bh/2;
+  x.fillStyle='rgba(0,0,0,.55)'; rrect(x,(W-bw)/2,top,bw,bh,fs*.35); x.fill();
+  x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
+  lines.forEach((l,j)=>x.fillText(l,W/2,top+fs*.4+lh*(j+.5)));
+  x.restore();
+}
+function drawReel(x,W,H,t,b,list){
+  x.fillStyle='#000'; x.fillRect(0,0,W,H);
+  const n=list.length; if(!n) return; const P=reelPlan(b,n), sps=P.sps;
+  if(b.template==='pan'){
+    const {img,im}=list[0], p=ease(clamp(t/P.total,0,1));
+    let sc=H/im.h, dw=im.w*sc, dh=H; if(dw<W*1.3){ sc=W*1.3/im.w; dw=W*1.3; dh=im.h*sc }
+    x.drawImage(img,-(dw-W)*p,(H-dh)/2,dw,dh);
+  } else if(b.template==='beforeafter'){
+    const pd=sps*2.4, k=Math.min(P.pairs-1,Math.floor(t/pd)), lt=t-k*pd;
+    const A=list[k*2], Bi=list[k*2+1]||list[k*2];
+    const prog=ease(clamp((lt-pd*.32)/(pd*.33),0,1));
+    drawPhoto(x,W,H,A,1.02,0,0,b.fit);
+    if(prog>0){ x.save(); x.beginPath(); x.rect(0,0,W*prog,H); x.clip(); drawPhoto(x,W,H,Bi,1.02,0,0,b.fit); x.restore();
+      if(prog<1){ x.fillStyle='#fff'; x.fillRect(W*prog-3*W/1080,0,6*W/1080,H) } }
+    textBox(x,W,H,prog<.5?'Before':'After',H*.72,40,false,t<2.6&&b.hook?0:1);
+  } else {
+    const i=Math.min(n-1,Math.floor(t/sps)), lt=t-i*sps, f=clamp(lt/sps,0,1);
+    if(b.template==='dump'){ const punch=lt<.12?1.08-.08*(lt/.12):1; drawPhoto(x,W,H,list[i],punch*(1+.03*f),0,0,b.fit) }
+    else {
+      const dir=i%2?1:-1; drawPhoto(x,W,H,list[i],1.04+.08*f,dir*(f*2-1)*.6,0,b.fit);
+      const xf=Math.min(.45,sps*.3); if(i>0&&lt<xf){ const pdir=(i-1)%2?1:-1; drawPhoto(x,W,H,list[i-1],1.12,pdir*.6,0,b.fit,1-lt/xf) }
+    }
+    if(b.template==='settings'){
+      const txt=exifParts(list[i].im.exif).join('  ·  ');
+      if(txt) textBox(x,W,H,txt.slice(0,Math.ceil(txt.length*clamp(f/.55,0,1))),H*.7,34,true);
+    }
+  }
+  if(b.hook&&t<2.6) textBox(x,W,H,b.hook,H*.24,64,false,clamp(t/.2,0,1)*clamp((2.6-t)/.25,0,1));
+  if(b.endText&&t>P.total-1.6) textBox(x,W,H,b.endText,H*.5,52,false,clamp((t-(P.total-1.6))/.25,0,1));
+}
+async function reelList(){
+  const p=D(), b=B();
+  return Promise.all(b.order.map(async nn=>{const im=p.images[nn-1]; return {im,img:await getImg(im.src)}}));
+}
+async function encodeReel(b,list,onProg){
+  const W=1080,H=1920,fps=30, total=reelPlan(b,list.length).total, N=Math.ceil(total*fps);
+  const c=cv(W,H), x=c.getContext('2d');
+  try{ await document.fonts.ready }catch(_){}
+  if(window.VideoEncoder&&window.Mp4Muxer){
+    let cfg=null;
+    for(const codec of ['avc1.640028','avc1.4d0028','avc1.420028']){
+      const t={codec,width:W,height:H,bitrate:10_000_000,framerate:fps};
+      try{ const s=await VideoEncoder.isConfigSupported(t); if(s.supported){cfg=t;break} }catch(_){}
+    }
+    if(cfg){
+      const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:W,height:H},fastStart:'in-memory'});
+      let err=null; const enc=new VideoEncoder({output:(ch,meta)=>muxer.addVideoChunk(ch,meta),error:e=>{err=e}});
+      enc.configure(cfg);
+      for(let i=0;i<N;i++){
+        if(err) throw err;
+        drawReel(x,W,H,i/fps,b,list);
+        const vf=new VideoFrame(c,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
+        enc.encode(vf,{keyFrame:i%(fps*2)===0}); vf.close();
+        while(enc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,4));
+        if(i%6===0){ onProg(i/N); await new Promise(r=>setTimeout(r,0)) }
+      }
+      await enc.flush(); if(err) throw err; muxer.finalize();
+      return {blob:new Blob([muxer.target.buffer],{type:'video/mp4'}),ext:'mp4'};
+    }
+  }
+  const mime=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
+  if(!mime) throw new Error('This browser cannot make videos. Try Chrome or Safari.');
+  const rec=new MediaRecorder(c.captureStream(fps),{mimeType:mime,videoBitsPerSecond:10_000_000}), chunks=[];
+  rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  const stopped=new Promise(r=>rec.onstop=r); rec.start(250);
+  const t0=performance.now();
+  await new Promise(r=>{const step=()=>{const t=(performance.now()-t0)/1000; drawReel(x,W,H,Math.min(t,total),b,list); onProg(t/total); if(t<total) requestAnimationFrame(step); else r()}; requestAnimationFrame(step)});
+  rec.stop(); await stopped;
+  return {blob:new Blob(chunks,{type:mime.split(';')[0]}),ext:mime.includes('mp4')?'mp4':'webm'};
+}
+
+/* ---------- reels: view ---------- */
+let prevRAF=0;
+function renderReels(m){
+  const p=D();
+  m.innerHTML=`${localBanner()}<div class="view-head"><div><h2>Reels</h2><p class="muted small">Ideas for what you already shot, a ready-made reel from your photos, and shot lists for your next outing.</p></div></div>
+  <div class="two">
+    <div class="stack">
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between"><h3>Working with your current post</h3><button class="btn sm ghost" data-go="create">Open in Create</button></div>
+        <div id="rStrip"></div>
+        <div id="ideaCtl"></div>
+      </div>
+      <div id="ideas" class="stack"></div>
+    </div>
+    <div class="stack">
+      <div class="card stack" id="builder"></div>
+      <div class="card stack" id="shots"></div>
+    </div>
+  </div>`;
+  paintRStrip(); paintIdeaCtl(); paintIdeas(); paintBuilder(); paintShots();
+}
+function paintRStrip(){
+  const p=D(), b=$('#rStrip'); if(!b) return;
+  b.innerHTML=p.images.length
+    ?`<div class="ordchips">${p.images.map((im,i)=>`<img src="${esc(im.src)}" alt="Slide ${i+1}" title="Slide ${i+1}">`).join('')}</div><p class="muted small" style="margin:6px 0 0">${p.images.length} slide${p.images.length>1?'s':''}${p.images.some(i=>i.frames)?' · clips are read as 6 frames each':''}. <button class="btn sm ghost" id="rAdd">Add more</button></p>`
+    :`<div class="drop" id="rAddBox" role="button" tabindex="0"><strong id="rAddMsg">Add photos or clips</strong><span class="muted small">Your best 5 to 15 frames from one outing work well.</span></div>`;
+  const open=()=>$('#filePick').click();
+  $('#rAdd')&&($('#rAdd').onclick=open); $('#rAddBox')&&($('#rAddBox').onclick=open);
+}
+function paintIdeaCtl(){
+  const p=D(), b=$('#ideaCtl'); if(!b) return;
+  if(S.ideasBusy){ b.innerHTML=`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span>Claude is studying your frames…</div><button class="btn sm" id="iStop">Stop</button></div>`; $('#iStop').onclick=()=>S.ideasCtl?.abort(); return }
+  if(!S.sample){ b.innerHTML=`<p class="muted small" style="margin:0">Reel ideas need this page open inside Claude. The builder on the right works anywhere.</p>`; return }
+  b.innerHTML=`<label class="f" for="iNotes">Anything Claude should know? <span class="hint">The mood you're after, what happened, a song you like.</span><input type="text" id="iNotes" value="${esc(p.reelNotes||'')}" placeholder="e.g. quiet early morning, want it calm not hype"></label>
+    <div class="row"><button class="btn primary" id="ideasBtn" ${p.images.length?'':'disabled'}>${p.reelIdeas?.length?'3 fresh ideas':'Give me 3 reel ideas'}</button><span class="muted small">${p.images.length?'At least two will be ready to build from these photos.':'Add photos first.'}</span></div>`;
+  $('#iNotes').oninput=e=>{p.reelNotes=e.target.value;touch()};
+  $('#ideasBtn').onclick=runIdeas;
+}
+function ideasPrompt(p,labels){
+  const s=S.settings;
+  return `You are a reels director helping a photographer who finds it hard to come up with reel ideas. Their Instagram is a personal photography account.
+
+ACCOUNT
+Handle: ${s.handle?'@'+s.handle:'not set'} · Niche: ${s.niche||'photography'} · City: ${s.city||'not given'} · Voice: ${s.voice}
+
+MATERIAL (in slide order)
+${labels.join('\n')||'(no images attached)'}
+Post notes: ${p.notes||'(none)'}
+Location: ${p.location||'(not given)'}
+${shotContext(p)}
+What they want from the reel: ${p.reelNotes||'(not said)'}
+Camera data per slide: ${p.images.map((im,i)=>`${i+1}: ${exifParts(im.exif).join(', ')||'none'}`).join(' | ')}
+
+This tool renders reels from the stills automatically with these templates:
+- dump: fast cuts, one photo per beat, small punch-in
+- kenburns: slow push and drift with crossfades
+- pan: one wide photo panned left to right
+- beforeafter: slides in pairs, first is before (raw), second is after (edited), wipe reveal
+- settings: each photo with its camera settings typing on
+
+Give 3 clearly different concepts. At least 2 must be buildable now with the templates and the existing slides. The third may need extra filming (behind the scenes, POV walk, phone vs camera and so on); then set "template": "none" and list what to film in "needsFilming".
+Hooks must work as on-screen text in the first 2 seconds, at most 7 words, specific to these photos (no "wait for it").
+
+Reply with only JSON:
+{"concepts":[{"name":"","template":"dump|kenburns|pan|beforeafter|settings|none","why":"one line on why this suits these photos","hook":"","endText":"at most 5 words, may use the handle","order":[1,2,3],"secondsPerSlide":1.5,"fit":"fill|frame","timeline":[{"at":"0-2s","shot":"","text":""}],"audioMood":"mood and BPM range, no song names","captionHook":"","needsFilming":[]}]}
+Notes: "order" uses 1-based slide numbers, strongest first frame first. "fit": "frame" keeps the whole photo on a blurred background (better for landscape photos); "fill" crops to 9:16. Timeline has 3 to 6 rows.`;
+}
+async function runIdeas(){
+  const p=D(); if(!S.sample||!p.images.length||S.ideasBusy) return;
+  S.ideasBusy=true; S.ideasCtl=new AbortController(); paintIdeaCtl();
+  try{
+    const {blobs,labels}=await aiImages(p);
+    const r=await S.sample.json(ideasPrompt(p,labels),{images:blobs,signal:S.ideasCtl.signal,cache:false});
+    const cs=(r&&Array.isArray(r.concepts))?r.concepts.filter(c=>c&&typeof c==='object').slice(0,3):[];
+    if(!cs.length) throw {code:'invalid_json'};
+    p.reelIdeas=cs; savePost(p); toast('3 ideas ready');
+  }catch(e){
+    const msg={cancelled:'',not_granted:'Claude was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached. Try again in a bit.',invalid_json:'The ideas came back garbled. Try again.',image_rejected:'An image could not be sent. Try fewer slides.'}[e&&e.code];
+    if(msg!=='') toast(msg||'Something went wrong. Try again.');
+    if(e&&['not_granted','sampling_disabled','capability_disabled','capability_removed','not_declared'].includes(e.code)) S.sample=null;
+  }
+  S.ideasBusy=false; paintIdeaCtl(); paintIdeas();
+}
+function paintIdeas(){
+  const p=D(), b=$('#ideas'); if(!b) return;
+  const cs=p.reelIdeas||[];
+  b.innerHTML=cs.map((c,i)=>{
+    const ok=TPL_KEYS.includes(c.template);
+    return `<div class="card stack concept">
+      <div class="row" style="justify-content:space-between"><h2 style="font-size:24px">${esc(c.name||'Idea '+(i+1))}</h2><span class="pill ${ok?'posted':''}">${ok?esc((TEMPLATES.find(t=>t[0]===c.template)||[])[1]):'Needs filming'}</span></div>
+      ${c.why?`<p class="small" style="margin:0">${esc(c.why)}</p>`:''}
+      ${c.hook?`<div class="hook" style="cursor:default"><span class="muted small">Hook on screen</span><br>${esc(c.hook)}</div>`:''}
+      ${Array.isArray(c.timeline)&&c.timeline.length?`<div class="tl">${c.timeline.map(r=>`<span class="at">${esc(r.at||'')}</span><span>${esc(r.shot||'')}${r.text?` <span class="muted">· text: “${esc(r.text)}”</span>`:''}</span>`).join('')}</div>`:''}
+      ${c.audioMood?`<div class="small"><strong>Audio:</strong> ${esc(c.audioMood)}</div>`:''}
+      ${Array.isArray(c.needsFilming)&&c.needsFilming.length?`<div class="small"><strong>Film this:</strong><ul style="margin:4px 0 0;padding-left:20px">${c.needsFilming.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+      <div class="row">${ok?`<button class="btn primary sm" data-build="${i}">Build this reel</button>`:''}${c.captionHook?`<button class="btn sm" data-chook="${i}">Use caption opener</button>`:''}</div>
+    </div>`}).join('');
+  b.onclick=e=>{
+    const bt=e.target.closest('[data-build]');
+    if(bt){
+      const c=cs[+bt.dataset.build], bb=B();
+      bb.template=c.template; bb.fit=c.fit==='frame'?'frame':'fill'; bb.sps=clamp(+c.secondsPerSlide||1.5,.3,4); bb.bpm='';
+      bb.hook=String(c.hook||''); bb.endText=String(c.endText||bb.endText||'');
+      const ord=(Array.isArray(c.order)?c.order:[]).map(Number).filter(x=>x>=1&&x<=p.images.length); if(ord.length) bb.order=ord;
+      savePost(p); paintBuilder(); $('#builder').scrollIntoView({behavior:'smooth',block:'start'}); toast('Loaded into the builder'); return;
+    }
+    const ch=e.target.closest('[data-chook]');
+    if(ch){ const h=String(cs[+ch.dataset.chook].captionHook); const lines=(p.caption||'').split('\n'); lines[0]=h; p.caption=lines.join('\n'); touch(); toast('Caption opener set. See it in Create.') }
+  };
+}
+function paintBuilder(){
+  cancelAnimationFrame(prevRAF);
+  const p=D(), box=$('#builder'); if(!box) return;
+  if(!p.images.length){ box.innerHTML=`<h3>Reel builder</h3><p class="muted small" style="margin:0">Add photos on the left and this turns them into a 9:16 reel you can save as an MP4.</p>`; return }
+  const b=B(), P=reelPlan(b,b.order.length);
+  box.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Reel builder</h3><span class="mono muted">${P.total.toFixed(1)}s · 1080×1920</span></div>
+    <div class="row">${seg('tplSeg',TEMPLATES,b.template)}</div>
+    <p class="muted small" style="margin:0">${TPL_HELP[b.template]}</p>
+    <div class="row">${seg('fitSeg2',[['fill','Fill screen'],['frame','Whole photo']],b.fit)}</div>
+    <label class="small row" style="gap:8px">${b.template==='pan'?'Speed':'Each photo'} <input type="range" id="spsR" min="0.3" max="4" step="0.1" value="${b.sps}" style="width:130px"> <span class="mono" id="spsV">${(+b.sps).toFixed(1)}s</span></label>
+    <div class="row small" style="gap:6px">Match a song: <input type="number" id="bpmIn" min="50" max="200" placeholder="BPM" value="${esc(b.bpm)}" style="width:84px"> cut every ${seg('beatSeg',[['1','1'],['2','2'],['4','4']],b.beats||2)} beats</div>
+    <label class="f" for="hookIn">Hook text <span class="hint">First 2.5 seconds. Under 7 words.</span><input type="text" id="hookIn" value="${esc(b.hook)}" placeholder="e.g. One street, five minutes, 50mm"></label>
+    <label class="f" for="endIn">End text <input type="text" id="endIn" value="${esc(b.endText)}" placeholder="@yourhandle"></label>
+    <div class="row" style="justify-content:space-between"><span class="small">Order</span><button class="btn sm ghost" id="ordReset">Use all, post order</button></div>
+    <div class="ordchips">${b.order.map(nn=>`<img src="${esc(p.images[nn-1].src)}" alt="Slide ${nn}" title="Slide ${nn}">`).join('')}</div>
+    <div class="row" style="align-items:flex-start;gap:14px">
+      <div><canvas id="rPrev" class="rprev" width="360" height="640"></canvas><div class="mono muted" id="rTime" style="margin-top:4px"></div></div>
+      <div class="stack" style="flex:1;min-width:160px">
+        <button class="btn primary" id="mkBtn">Make MP4</button>
+        <div class="prog hide" id="mkProg"><i></i></div>
+        <div id="mkOut"></div>
+        <p class="muted small" style="margin:0">The video is silent on purpose. Add trending audio inside Instagram; it helps reach, and you can line up the cuts with the BPM above.</p>
+      </div>
+    </div>`;
+  const re=()=>{savePost(p);paintBuilder()};
+  $('#tplSeg').onclick=e=>{const v=e.target.dataset.v;if(v){b.template=v;re()}};
+  $('#fitSeg2').onclick=e=>{const v=e.target.dataset.v;if(v){b.fit=v;re()}};
+  $('#spsR').oninput=e=>{b.sps=+e.target.value;b.bpm='';$('#bpmIn').value='';$('#spsV').textContent=b.sps.toFixed(1)+'s';clearTimeout(S._st);S._st=setTimeout(()=>{savePost(p);startPreview()},120)};
+  $('#spsR').onchange=re;
+  const applyBpm=()=>{const bpm=+b.bpm; if(bpm>=50&&bpm<=200){ b.sps=+(60/bpm*(+b.beats||2)).toFixed(3); re() }};
+  $('#bpmIn').onchange=e=>{b.bpm=e.target.value;applyBpm()};
+  $('#beatSeg').onclick=e=>{const v=e.target.dataset.v;if(v){b.beats=+v; if(b.bpm) applyBpm(); else re()}};
+  $('#hookIn').oninput=e=>{b.hook=e.target.value;touch()};
+  $('#endIn').oninput=e=>{b.endText=e.target.value;touch()};
+  $('#ordReset').onclick=()=>{b.order=p.images.map((_,i)=>i+1);re()};
+  $('#mkBtn').onclick=makeMp4;
+  if(S.reelOut&&S.reelOut.pid===p.id) showReelOut();
+  startPreview();
+}
+async function startPreview(){
+  cancelAnimationFrame(prevRAF);
+  const c=$('#rPrev'); if(!c) return;
+  let list; try{ list=await reelList() }catch(_){ return }
+  const x=c.getContext('2d'), t0=performance.now();
+  const step=()=>{
+    if(!c.isConnected) return;
+    const b=B(), total=reelPlan(b,list.length).total, t=((performance.now()-t0)/1000)%total;
+    drawReel(x,c.width,c.height,t,b,list);
+    const tl=$('#rTime'); if(tl) tl.textContent=`${t.toFixed(1)}s / ${total.toFixed(1)}s`;
+    prevRAF=requestAnimationFrame(step);
+  };
+  step();
+}
+async function makeMp4(){
+  const p=D(), b=JSON.parse(JSON.stringify(B())), btn=$('#mkBtn'), pr=$('#mkProg');
+  btn.disabled=true; btn.textContent='Making your reel…'; pr.classList.remove('hide');
+  try{
+    const list=await reelList();
+    const out=await encodeReel(b,list,f=>{const i=$('#mkProg i'); if(i) i.style.width=Math.round(clamp(f,0,1)*100)+'%'});
+    if(S.reelOut) URL.revokeObjectURL(S.reelOut.url);
+    S.reelOut={pid:p.id,blob:out.blob,ext:out.ext,url:URL.createObjectURL(out.blob)};
+    showReelOut();
+  }catch(e){ console.error(e); toast(e&&e.message?e.message:'Could not make the video') }
+  btn.disabled=false; btn.textContent='Make MP4 again'; pr.classList.add('hide');
+}
+function showReelOut(){
+  const o=S.reelOut, b=$('#mkOut'); if(!b||!o) return;
+  b.innerHTML=`<video class="rvid" src="${o.url}" controls playsinline loop muted></video>
+    <div class="row"><button class="btn ink" id="rSave">Save ${o.ext.toUpperCase()}</button><button class="btn sm" id="rAsReel">Make this post a reel</button></div>
+    ${o.ext!=='mp4'?'<p class="small" style="margin:0;color:var(--accent)">This browser made a WebM file. Instagram wants MP4: use Chrome or Safari for this step.</p>':''}`;
+  $('#rSave').onclick=async()=>{
+    if(!S.dl){toast('Saving is not available here. Long-press the video instead.');return}
+    try{ await S.dl.save({filename:`${S.settings.handle||'reel'}_${new Date().toISOString().slice(0,10)}.${o.ext}`,data:o.blob}); toast('Saved') }
+    catch(e){ if(e.code!=='declined') toast('Could not save the video here.') }
+  };
+  $('#rAsReel').onclick=()=>{const p=D(); p.format='reel'; savePost(p); toast('Post set to Reel. Caption it in Create.')};
+}
+
+/* ---------- reels: shot lists ---------- */
+function saveShot(s){ s.updatedAt=Date.now(); S.shots.set(s.id,dbBody(s)); if(S.col) queueSave('sl_'+s.id,dbBody(s)); else persistLocal() }
+function paintShots(){
+  const box=$('#shots'); if(!box) return;
+  if(box.contains(document.activeElement)&&document.activeElement.tagName==='INPUT'&&document.activeElement.type==='text') return;
+  const list=[...S.shots.values()].sort((a,b)=>b.createdAt-a.createdAt);
+  const f=S.shotForm||{};
+  box.innerHTML=`<h3>Shot list for your next outing</h3>
+    <p class="muted small" style="margin:0">Film these short clips alongside your photos and the reel is already half made.</p>
+    <label class="f" for="slWhere">Where <input type="text" id="slWhere" value="${esc(f.where||'')}" placeholder="e.g. KR Market, Bengaluru"></label>
+    <label class="f" for="slWhen">When and how long <input type="text" id="slWhen" value="${esc(f.when||'')}" placeholder="e.g. Saturday 6:30am, about 2 hours"></label>
+    <label class="f" for="slWhat">What you're hoping to capture <input type="text" id="slWhat" value="${esc(f.what||'')}" placeholder="e.g. flower sellers, morning light, the chaos"></label>
+    <label class="f" for="slGear">Gear <span class="hint">Optional</span><input type="text" id="slGear" value="${esc(f.gear||'')}" placeholder="e.g. X-T5 with 23mm, phone for BTS"></label>
+    <div class="row">${S.sample?`<button class="btn primary" id="slGo" ${S.shotBusy?'disabled':''}>${S.shotBusy?'Planning…':'Make shot list'}</button>`:`<span class="muted small">Shot lists need this page open inside Claude.</span>`}${S.shotBusy?'<span class="spin"></span>':''}</div>
+    <div class="stack" id="slList">${list.map(shotCard).join('')}</div>`;
+  ['where','when','what','gear'].forEach(k=>{const el=$('#sl'+k[0].toUpperCase()+k.slice(1)); el.oninput=()=>{S.shotForm={...(S.shotForm||{}),[k]:el.value}}});
+  $('#slGo')&&($('#slGo').onclick=runShotList);
+  $('#slList').addEventListener('toggle',e=>{const d=e.target; if(d.dataset&&d.dataset.sid){ if(d.open) S.openShot=d.dataset.sid; else if(S.openShot===d.dataset.sid) S.openShot=null }},true);
+  $('#slList').onchange=e=>{const c=e.target.closest('[data-sk]'); if(!c) return; const [id,i]=c.dataset.sk.split('|'); const s={...S.shots.get(id)}; s.done={...(s.done||{}),[i]:c.checked}; saveShot(s); paintShots()};
+  $('#slList').onclick=e=>{const d=e.target.closest('[data-sdel]'); if(!d) return; if(d.dataset.armed){ S.shots.delete(d.dataset.sdel); if(S.col) queueSave('sl_'+d.dataset.sdel,null); else persistLocal(); paintShots() } else { d.dataset.armed='1'; d.textContent='Tap again to delete' }};
+}
+function shotCard(s){
+  const clips=Array.isArray(s.clips)?s.clips:[], done=s.done||{}, n=clips.filter((_,i)=>done[i]).length;
+  return `<details class="card" data-sid="${s.id}" style="background:var(--bg)" ${s.id===S.openShot?'open':''}>
+    <summary><span>${esc(s.title||s.where||'Shot list')}</span> <span class="mono muted">${n}/${clips.length}</span></summary>
+    <div class="stack" style="margin-top:8px">
+      <p class="muted small" style="margin:0">${esc([s.where,s.when].filter(Boolean).join(' · '))}</p>
+      ${s.summary?`<p class="small" style="margin:0">${esc(s.summary)}</p>`:''}
+      <div>${clips.map((c,i)=>`<label class="shot ${done[i]?'done':''}"><input type="checkbox" data-sk="${s.id}|${i}" ${done[i]?'checked':''}><span><span class="what">${esc(c.shot||'')}</span> <span class="sec">${c.seconds?esc(c.seconds)+'s':''}</span>${c.how?`<br><span class="muted small">${esc(c.how)}</span>`:''}${c.use?`<br><span class="small" style="color:var(--amber)">Use: ${esc(c.use)}</span>`:''}</span></label>`).join('')}</div>
+      ${Array.isArray(s.stills)&&s.stills.length?`<div class="small"><strong>Photos to get:</strong><ul style="margin:4px 0 0;padding-left:20px">${s.stills.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+      ${Array.isArray(s.reels)&&s.reels.length?`<div class="small"><strong>Reels this sets up:</strong><ul style="margin:4px 0 0;padding-left:20px">${s.reels.map(r=>`<li>${esc(r.name||'')}${r.uses?` <span class="muted">(${esc(r.uses)})</span>`:''}</li>`).join('')}</ul></div>`:''}
+      ${s.sound?`<div class="small"><strong>Sound:</strong> ${esc(s.sound)}</div>`:''}
+      ${Array.isArray(s.tips)&&s.tips.length?s.tips.map(t=>`<div class="tip">${esc(t)}</div>`).join(''):''}
+      <div><button class="btn sm danger ghost" data-sdel="${s.id}">Delete</button></div>
+    </div></details>`;
+}
+async function runShotList(){
+  const f=S.shotForm||{}, s=S.settings;
+  if(!f.where&&!f.what){toast('Say where you are going or what you want to shoot');return}
+  S.shotBusy=true; paintShots();
+  const prompt=`You plan short video clips for a photographer heading out on a photo walk, so they come back with material for Instagram Reels as well as photos. They find reel ideas hard, so be concrete and visual.
+
+Photographer: niche ${s.niche||'photography'}; home city ${s.city||'not given'}; caption voice ${s.voice}.
+Where: ${f.where||'not given'}
+When / how long: ${f.when||'not given'}
+Hoping to capture: ${f.what||'not given'}
+Gear: ${f.gear||'camera, plus a phone'}
+
+Give 8 to 12 clips, each 3 to 8 seconds, filmed vertically. Mix: an establishing wide, details and textures, hands on the camera (behind the scenes, phone on chest or a small tripod), a POV walking shot, motion (people, vehicles, light), sound-rich moments, one or two transition-friendly shots (whip pan, cover the lens, match cut), and the moment the shutter is pressed.
+Be specific to the place and time of day. Keep "how" to one practical line (angle, framing, motion). "use" names which reel the clip serves.
+Add 4 to 6 photographs worth getting, 2 reel concepts these clips set up, a note on capturing ambient sound, and 3 short tips (light at that hour, respectful street photography etiquette, battery or storage).
+
+Reply with only JSON:
+{"title":"short name for the outing","summary":"one line","clips":[{"shot":"","seconds":4,"how":"","use":""}],"stills":[""],"reels":[{"name":"","uses":"clips 1, 4, 7"}],"sound":"","tips":[""]}`;
+  try{
+    const r=await S.sample.json(prompt,{cache:false});
+    if(!r||!Array.isArray(r.clips)) throw {code:'invalid_json'};
+    const doc={id:newId(),createdAt:Date.now(),where:f.where||'',when:f.when||'',what:f.what||'',title:String(r.title||f.where||'Shot list'),summary:String(r.summary||''),
+      clips:r.clips.slice(0,14).map(c=>({shot:String(c.shot||''),seconds:c.seconds||'',how:String(c.how||''),use:String(c.use||'')})),
+      stills:(r.stills||[]).map(String).slice(0,8),reels:(r.reels||[]).slice(0,3).map(x=>({name:String(x.name||''),uses:String(x.uses||'')})),sound:String(r.sound||''),tips:(r.tips||[]).map(String).slice(0,4),done:{}};
+    saveShot(doc); S.openShot=doc.id; S.shotForm={}; toast('Shot list ready');
+  }catch(e){
+    const msg={not_granted:'Claude was not allowed for this page.',rate_limited:'Claude is busy or your usage limit was reached.',invalid_json:'The plan came back garbled. Try again.'}[e&&e.code];
+    toast(msg||'Something went wrong. Try again.');
+    if(e&&['not_granted','sampling_disabled'].includes(e.code)) S.sample=null;
+  }
+  S.shotBusy=false; if(document.activeElement) document.activeElement.blur(); paintShots();
+}
+
+/* ---------- profile view ---------- */
+function renderProfile(m){
+  const s=S.settings;
+  m.innerHTML=`${localBanner()}<div class="view-head"><div><h2>Profile & voice</h2><p class="muted small">Claude uses these on every caption so they sound like you.</p></div></div>
+  <div class="two">
+    <div class="card stack">
+      <label class="f" for="pHandle">Instagram handle <input type="text" id="pHandle" value="${esc(s.handle)}" placeholder="without @"></label>
+      <label class="f" for="pNiche">What you shoot <span class="hint">Your niche in a few words. Specific grows faster than "photography".</span><input type="text" id="pNiche" value="${esc(s.niche)}" placeholder="e.g. street and temple architecture, South India"></label>
+      <label class="f" for="pCity">Home city <input type="text" id="pCity" value="${esc(s.city)}" placeholder="e.g. Bengaluru"></label>
+      <label class="f" for="pFol">Followers, roughly <span class="hint">Used for advice like Trial Reels (1,000+ followers).</span><input type="number" id="pFol" min="0" value="${esc(s.followers||'')}" placeholder="e.g. 850"></label>
+      <label class="f" for="pVoice">Caption voice <select id="pVoice">${['Storyteller','Minimal','Poetic','Technical (gear and settings forward)','Witty','Warm and personal'].map(v=>`<option ${v===s.voice?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label class="f" for="pLang">Language(s) <span class="hint">e.g. "English with an occasional Tamil phrase"</span><input type="text" id="pLang" value="${esc(s.language)}"></label>
+    </div>
+    <div class="card stack">
+      <label class="f" for="pSig">Signature line <span class="hint">Added after the caption. Keep it short.</span><input type="text" id="pSig" value="${esc(s.signature)}" placeholder="e.g. Prints on request · DM"></label>
+      <label class="f" for="pBank">Your go-to hashtags <span class="hint">Shown as one-tap chips in Create. Separate with spaces.</span><textarea id="pBank" rows="3" placeholder="bangalorediaries indianstreetphotography fujifilm_xseries">${esc(s.tagBank)}</textarea></label>
+      <label class="small row" style="gap:8px"><input type="checkbox" id="pGear" ${s.gearLine?'checked':''}> Add a camera line (📷 body · lens · settings) under captions</label>
+      <div class="stack" style="gap:4px"><h3>Saved places</h3>
+        <div id="placeList">${(s.places||[]).length?(s.places||[]).map((pl,i)=>`<div class="row" style="justify-content:space-between;padding:5px 0;border-top:1px solid var(--line)"><span><strong>${esc(pl.name)}</strong> <span class="mono muted">${(+pl.lat).toFixed(4)}, ${(+pl.lon).toFixed(4)}</span></span><span class="row" style="gap:4px"><a class="btn sm ghost" href="https://www.google.com/maps?q=${pl.lat},${pl.lon}" target="_blank" rel="noopener">Map ↗</a><button class="btn sm ghost danger" data-delpl="${i}">Remove</button></span></div>`).join(''):'<p class="muted small" style="margin:0">None yet. When a photo has GPS, type the place name in Create and tap "Save as a place". Photos taken within 300 m are then tagged for you.</p>'}</div></div>
+      <div class="tip small">Reach basics that still work in 2026: post Reels alongside photos, reply to comments fast, and send good posts to friends; shares in DMs count as a strong signal.</div>
+    </div>
+  </div>`;
+  const bind=(id,k,ev='input')=>$('#'+id).addEventListener(ev,e=>{s[k]=e.target.type==='checkbox'?e.target.checked:e.target.value; if(k==='handle') s.handle=s.handle.replace(/^@/,'').trim(); saveSettings()});
+  bind('pHandle','handle'); bind('pNiche','niche'); bind('pCity','city'); bind('pFol','followers');
+  $('#placeList').onclick=e=>{const d=e.target.closest('[data-delpl]'); if(!d) return; s.places=(s.places||[]).filter((_,i)=>i!==+d.dataset.delpl); saveSettings(); renderProfile(m)}; bind('pVoice','voice','change'); bind('pLang','language'); bind('pSig','signature'); bind('pBank','tagBank'); bind('pGear','gearLine','change');
+}
+function refreshProfileBits(){ /* editor stays as-is during sync */ }
+
+boot();
+</script>
+</body>
+</html>
