@@ -189,7 +189,8 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 
 .banner{background:color-mix(in srgb,var(--amber) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--amber) 40%,var(--line));border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:14px}
 #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw;text-align:center}
-#toast.on{opacity:1}
+#toast.on{opacity:1;pointer-events:auto;cursor:pointer}
+#toast.err{background:var(--accent);color:var(--accent-ink);max-width:min(92vw,520px);text-align:left;user-select:text}
 .empty{padding:22px;text-align:center;color:var(--muted)}
 .hide{display:none!important}
 .saved-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
@@ -262,7 +263,9 @@ function toast(msg){
   if(S&&Date.now()-(S.authFailAt||0)<3000) msg='Your AI passcode was not accepted. Update it in Profile → AI writing.';
   else if(S&&Date.now()-(S.notConfiguredAt||0)<3000) msg='AI is not set up on the server yet. Add the Gemini key and passcode in Cloudflare.';
   else if(S&&S.aiErr&&Date.now()-S.aiErr.at<3000) msg='AI failed: '+S.aiErr.why.slice(0,220);
-  const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
+  const t=$('#toast'), err=/^(AI failed|Your AI passcode|AI is not set up)/.test(msg);
+  t.textContent=msg; t.classList.add('on'); t.classList.toggle('err',err); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),err?10000:2600)}
+document.addEventListener('DOMContentLoaded',()=>{ const t=$('#toast'); if(t) t.onclick=()=>t.classList.remove('on') });
 
 const DEFAULT_SETTINGS={handle:'',niche:'',city:'',voice:'Storyteller',signature:'',language:'English',tagBank:'',gearLine:true,goal:4,
   slots:{0:['10:00','18:30'],1:['08:00','19:30'],2:['08:00','13:00','19:30'],3:['08:00','19:30'],4:['08:00','13:00','19:30'],5:['08:00','20:00'],6:['10:00','18:30']}};
@@ -899,6 +902,7 @@ function refreshAICard(){
   const has=!!(p.caption||p.tags.length);
   b.innerHTML=`<div class="row"><button class="btn primary" id="aiBtn" ${p.images.length?'':'disabled'}>${has?`Rewrite with ${AI}`:`Write caption with ${AI}`}</button>
     <span class="muted small">${p.images.length?`Reads the ${p.images.length>1?'slides':'photo'}, your notes and camera data${p.format==='reel'?'; plans the reel':''}.`:'Add a photo first.'}</span></div>`;
+  if(S.aiErr&&Date.now()-S.aiErr.at<600000) b.insertAdjacentHTML('beforeend',`<p class="small" style="margin:6px 0 0;color:var(--accent);user-select:text">Last try failed: ${esc(S.aiErr.why)}</p>`);
   $('#aiBtn').onclick=runAI;
 }
 function paintHooks(){
@@ -1910,27 +1914,48 @@ function parseLooseJSON(t){
   if(a>=0&&z>a){ try{ return JSON.parse(t.slice(a,z+1)) }catch(_){} }
   throw {code:'invalid_json',text:t};
 }
+const AI_TIMEOUT_MS=170000;
+function aiLog(entry){
+  S.aiLogList=[entry,...(S.aiLogList||loadAiLog())].slice(0,8);
+  try{ localStorage.setItem('reachloop_ai_log',JSON.stringify(S.aiLogList)) }catch(_){}
+}
+function loadAiLog(){ try{ return JSON.parse(localStorage.getItem('reachloop_ai_log')||'[]') }catch(_){ return [] } }
 async function aiCall(prompt,opts={},wantJson=false){
-  const images=opts.images?await Promise.all([].concat(opts.images).filter(Boolean).slice(0,12).map(b64)):[];
-  let r;
+  const t0=Date.now(), kind=opts.kind||(typeof prompt==='string'?prompt.slice(0,34):'chat');
+  // a visible seconds counter on whatever spinner is showing
+  const tick=setInterval(()=>{ $$('.aiwait').forEach(w=>{ let sp=w.querySelector('.aisecs'); if(!sp){ sp=document.createElement('span'); sp.className='aisecs mono'; w.appendChild(sp) } sp.textContent=` · ${Math.round((Date.now()-t0)/1000)}s` }) },1000);
+  const ctl=new AbortController(); let timedOut=false;
+  const timer=setTimeout(()=>{ timedOut=true; ctl.abort() },AI_TIMEOUT_MS);
+  if(opts.signal){ if(opts.signal.aborted) ctl.abort(); else opts.signal.addEventListener('abort',()=>ctl.abort(),{once:true}) }
+  const fail=(code,why)=>{ S.aiErr={at:Date.now(),why}; aiLog({at:t0,ms:Date.now()-t0,ok:false,why,kind}); return {code,message:why} };
   try{
-    r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json','x-passcode':getPass()},body:JSON.stringify({prompt:typeof prompt==='string'?prompt:prompt.map(m=>m.content).join('\n\n'),images,json:wantJson}),signal:opts.signal});
-  }catch(e){ throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error',message:'network'} }
-  const d=await r.json().catch(()=>({}));
-  if(r.status===401){ S.authFailAt=Date.now(); throw {code:'bad_passcode'} }
-  if(r.status===503){ S.notConfiguredAt=Date.now(); throw {code:'not_configured'} }
-  const why=[d.error,d.status?('HTTP '+d.status):'',d.model?('model '+d.model):'',d.detail].filter(Boolean).join(' · ')||('HTTP '+r.status);
-  if(!r.ok||!d.text){ S.aiErr={at:Date.now(),why}; }
-  if(r.status===429) throw {code:'rate_limited',message:why};
-  if(r.status===422) throw {code:'refused',message:why};
-  if(!r.ok||!d.text) throw {code:'upstream_error',message:why};
-  S.aiErr=null; S.aiLastModel=d.model;
-  if(opts.onText) try{ opts.onText({text:d.text,delta:d.text}) }catch(_){}
-  return d;
+    const images=opts.images?await Promise.all([].concat(opts.images).filter(Boolean).slice(0,12).map(b64)):[];
+    let r;
+    try{
+      r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json','x-passcode':getPass()},body:JSON.stringify({prompt:typeof prompt==='string'?prompt:prompt.map(m=>m.content).join('\n\n'),images,json:wantJson}),signal:ctl.signal});
+    }catch(e){
+      if(timedOut) throw fail('upstream_error',`timeout · no answer after ${AI_TIMEOUT_MS/1000}s`);
+      if(e&&e.name==='AbortError'){ aiLog({at:t0,ms:Date.now()-t0,ok:false,why:'stopped',kind}); throw {code:'cancelled'} }
+      throw fail('upstream_error','network · could not reach the app server (offline?)');
+    }
+    const raw=await r.text(); let d={}; try{ d=JSON.parse(raw) }catch(_){}
+    const st=d.httpStatus||r.status;
+    if(st===524) throw fail('upstream_error','Cloudflare timeout (524) · Gemini took longer than about 100s');
+    if(r.status===401){ S.authFailAt=Date.now(); throw fail('bad_passcode','bad_passcode · HTTP 401') }
+    if(r.status===503&&d.error==='not_configured'){ S.notConfiguredAt=Date.now(); throw fail('not_configured','not_configured · HTTP 503') }
+    const why=[d.error,d.status?('HTTP '+d.status):('HTTP '+st),d.model?('model '+d.model):'',d.detail||(!d.error&&raw?raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,160):'')].filter(Boolean).join(' · ');
+    if(st===429) throw fail('rate_limited',why);
+    if(st===422) throw fail('refused',why);
+    if(st>=300||!d.text) throw fail('upstream_error',why);
+    S.aiErr=null; S.aiLastModel=d.model;
+    aiLog({at:t0,ms:Date.now()-t0,ok:true,why:`${d.model||'model ?'}${d.truncated?' · cut short':''}`,kind});
+    if(opts.onText) try{ opts.onText({text:d.text,delta:d.text}) }catch(_){}
+    return d;
+  } finally { clearTimeout(timer); clearInterval(tick) }
 }
 function makeWebSample(){
   const f=async(prompt,opts)=>{ const d=await aiCall(prompt,opts,false); return {text:d.text,truncated:!!d.truncated,modelTierApplied:'default'} };
-  f.json=async(prompt,opts)=>{ const d=await aiCall(prompt,opts,true); try{ return parseLooseJSON(d.text) }catch(e){ S.aiErr={at:Date.now(),why:`reply was not valid JSON (${d.text.length} chars${d.truncated?', cut short':''}, model ${d.model})`}; throw e } };
+  f.json=async(prompt,opts)=>{ const d=await aiCall(prompt,opts,true); try{ return parseLooseJSON(d.text) }catch(e){ const why=`reply was not valid JSON (${d.text.length} chars${d.truncated?', cut short':''}, model ${d.model})`; S.aiErr={at:Date.now(),why}; aiLog({at:Date.now(),ms:0,ok:false,why,kind:'parse'}); throw e } };
   f.limits=async()=>({maxPromptBytes:200000,images:{maxCount:12,maxInputBytes:20e6,mediaTypes:['image/jpeg']}});
   return f;
 }
@@ -1951,7 +1976,8 @@ function aiCardHTML(){
     <div class="row"><input type="password" id="aiPass" autocomplete="current-password" placeholder="Your reachloop passcode" value="${on?'••••••••':''}" style="max-width:260px" aria-label="AI passcode">
       <button class="btn ${on?'':'primary'}" id="aiPassSave">${on?'Change':'Turn on'}</button>${on?'<button class="btn ghost sm" id="aiPassOff">Turn off</button>':''}</div>
     <p class="small muted" style="margin:0" id="aiPassMsg"></p>
-    ${on?`<div class="row"><button class="btn sm" id="aiTest">Run a test</button><span class="small muted" id="aiTestOut">Sends a tiny request and shows exactly what comes back.</span></div>`:''}
+    ${on?`<div class="row"><button class="btn sm" id="aiTest">Run a test</button><span class="small muted" id="aiTestOut" style="user-select:text">Sends a tiny request and shows exactly what comes back.</span></div>`:''}
+    ${(S.aiLogList||loadAiLog()).length?`<details><summary>Recent AI requests</summary><div class="stack" style="gap:4px;margin-top:6px;user-select:text" id="aiLogList">${(S.aiLogList||loadAiLog()).map(x=>`<div class="small"><span class="mono muted">${new Date(x.at).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})} · ${(x.ms/1000).toFixed(1)}s</span> ${x.ok?'<span style="color:var(--ok)">ok</span>':'<span style="color:var(--accent)">failed</span>'} <span class="muted">${esc(x.kind||'')}</span><br>${esc(x.why||'')}</div>`).join('')}</div><div class="row" style="margin-top:6px"><button class="btn sm" id="aiLogCopy">Copy details</button></div></details>`:''}
   </div>`;
 }
 function bindAICard(m){
@@ -1965,10 +1991,12 @@ function bindAICard(m){
     else $('#aiPassMsg').textContent=t.why;
   };
   $('#aiPassOff')&&($('#aiPassOff').onclick=()=>{ setPass(''); S.sample=null; toast('AI writing is off'); renderProfile(m) });
+  $('#aiLogCopy')&&($('#aiLogCopy').onclick=async()=>{ const txt=(S.aiLogList||loadAiLog()).map(x=>`${new Date(x.at).toISOString()} ${(x.ms/1000).toFixed(1)}s ${x.ok?'ok':'FAILED'} [${x.kind}] ${x.why}`).join('\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied. Paste it to Claude.') }catch(_){ toast('Could not copy. Long-press the text instead.') } });
   $('#aiTest')&&($('#aiTest').onclick=async()=>{
     const out=$('#aiTestOut'), btn=$('#aiTest'); btn.disabled=true; out.textContent='Waiting for Gemini…'; const t0=performance.now();
-    try{ const r=await S.sample.json('Reply with only this JSON: {"ok":true,"word":"ready"}',{}); out.textContent=`Works: ${JSON.stringify(r)} in ${((performance.now()-t0)/1000).toFixed(1)}s via ${S.aiLastModel||'Gemini'}.` }
-    catch(e){ out.textContent=`Failed after ${((performance.now()-t0)/1000).toFixed(1)}s: ${(S.aiErr&&S.aiErr.why)||e.code||'unknown error'}` }
+    out.classList.add('aiwait');
+    try{ const r=await S.sample.json('Reply with only this JSON: {"ok":true,"word":"ready"}',{kind:'test'}); out.classList.remove('aiwait'); out.textContent=`Works: ${JSON.stringify(r)} in ${((performance.now()-t0)/1000).toFixed(1)}s via ${S.aiLastModel||'Gemini'}.` }
+    catch(e){ out.classList.remove('aiwait'); out.textContent=`Failed after ${((performance.now()-t0)/1000).toFixed(1)}s: ${(S.aiErr&&S.aiErr.why)||e.code||'unknown error'}` }
     btn.disabled=false;
   });
 }

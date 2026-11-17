@@ -21,15 +21,29 @@ function sameSecret(a, b) {
   return diff === 0;
 }
 
+const GEMINI_TIMEOUT_MS = 150_000;
+let thinkingSupported = true;
 async function callGemini(env, model, parts, wantJson) {
-  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  const send = (withThinking) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
     body: JSON.stringify({
       contents: [{ role: 'user', parts }],
-      generationConfig: { maxOutputTokens: 16384, ...(wantJson ? { responseMimeType: 'application/json' } : {}) }
+      generationConfig: {
+        maxOutputTokens: 8192,
+        ...(wantJson ? { responseMimeType: 'application/json' } : {}),
+        // captions don't need long deliberation; less thinking means much faster replies
+        ...(withThinking ? { thinkingConfig: { thinkingLevel: 'low' } } : {})
+      }
     })
   });
+  let res = await send(thinkingSupported);
+  if (thinkingSupported && res.status === 400) {
+    const peek = await res.clone().json().catch(() => null);
+    if (/thinking/i.test(String((peek && peek.error && peek.error.message) || ''))) { thinkingSupported = false; res = await send(false); }
+  }
+  return res;
 }
 
 // If the default model name is not available to this key, ask Google which Flash models it can use.
@@ -65,8 +79,32 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: 'bad_request' }, 400); }
   if (body && body.ping) return json({ ok: true, model: env.GEMINI_MODEL || DEFAULT_MODEL });
 
+  return keepAliveResponse(() => generate(env, body));
+}
+
+// Cloudflare ends a request with error 524 if no reply has started after ~100s. Start the reply
+// at once, send a space every 10s while Gemini works, then the JSON (leading spaces are valid JSON).
+// The real status travels inside the JSON as httpStatus.
+function keepAliveResponse(work) {
+  const { readable, writable } = new TransformStream();
+  const w = writable.getWriter();
+  const enc = new TextEncoder();
+  w.write(enc.encode(' '));
+  const ping = setInterval(() => { w.write(enc.encode(' ')).catch(() => {}); }, 10_000);
+  (async () => {
+    let result;
+    try { result = await work(); } catch (e) { result = { httpStatus: 500, error: 'server', detail: String((e && e.message) || e).slice(0, 200) }; }
+    clearInterval(ping);
+    try { await w.write(enc.encode(JSON.stringify(result))); await w.close(); } catch (_) {}
+  })();
+  return new Response(readable, { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+}
+
+const out = (body, status = 200) => ({ ...body, httpStatus: status });
+
+async function generate(env, body) {
   const prompt = String((body && body.prompt) || '').slice(0, MAX_PROMPT);
-  if (!prompt.trim()) return json({ error: 'bad_request' }, 400);
+  if (!prompt.trim()) return out({ error: 'bad_request' }, 400);
   const images = (Array.isArray(body.images) ? body.images : [])
     .filter((d) => typeof d === 'string' && d.length < 8_000_000)
     .slice(0, MAX_IMAGES);
@@ -74,24 +112,30 @@ export async function onRequestPost({ request, env }) {
 
   const started = Date.now();
   let model = env.GEMINI_MODEL || pickedModel || DEFAULT_MODEL;
-  let res = await callGemini(env, model, parts, Boolean(body.json));
-  let data = await res.json().catch(() => null);
-  if (!res.ok && notFound(res.status, data)) {
-    const alt = await pickAvailableModel(env);
-    if (alt && alt !== model) { model = alt; res = await callGemini(env, model, parts, Boolean(body.json)); data = await res.json().catch(() => null); }
+  let res, data;
+  try {
+    res = await callGemini(env, model, parts, Boolean(body.json));
+    data = await res.json().catch(() => null);
+    if (!res.ok && notFound(res.status, data)) {
+      const alt = await pickAvailableModel(env);
+      if (alt && alt !== model) { model = alt; res = await callGemini(env, model, parts, Boolean(body.json)); data = await res.json().catch(() => null); }
+    }
+  } catch (e) {
+    const timedOut = e && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    return out({ error: timedOut ? 'timeout' : 'network', model, detail: timedOut ? `Gemini did not answer within ${GEMINI_TIMEOUT_MS / 1000}s` : String(e && e.message || e).slice(0, 200) }, 504);
   }
 
   if (!res.ok) {
     const detail = String((data && data.error && data.error.message) || '').slice(0, 300);
     const info = { detail, status: res.status, model };
-    if (res.status === 429) return json({ error: 'rate_limited', ...info }, 429);
-    if (res.status === 400 || res.status === 403) return json({ error: 'upstream_rejected', ...info }, 502);
-    return json({ error: 'upstream', ...info }, 502);
+    if (res.status === 429) return out({ error: 'rate_limited', ...info }, 429);
+    if (res.status === 400 || res.status === 403) return out({ error: 'upstream_rejected', ...info }, 502);
+    return out({ error: 'upstream', ...info }, 502);
   }
 
   const cand = data && data.candidates && data.candidates[0];
-  if (!cand) return json({ error: 'refused', model, detail: String((data && data.promptFeedback && data.promptFeedback.blockReason) || 'blocked') }, 422);
+  if (!cand) return out({ error: 'refused', model, detail: String((data && data.promptFeedback && data.promptFeedback.blockReason) || 'blocked') }, 422);
   const text = ((cand.content && cand.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
-  if (!text.trim()) return json({ error: cand.finishReason === 'SAFETY' ? 'refused' : 'empty', model, detail: `finished with ${cand.finishReason || 'no text'}` }, cand.finishReason === 'SAFETY' ? 422 : 502);
-  return json({ text, model, ms: Date.now() - started, truncated: cand.finishReason === 'MAX_TOKENS' });
+  if (!text.trim()) return out({ error: cand.finishReason === 'SAFETY' ? 'refused' : 'empty', model, detail: `finished with ${cand.finishReason || 'no text'}` }, cand.finishReason === 'SAFETY' ? 422 : 502);
+  return out({ text, model, ms: Date.now() - started, truncated: cand.finishReason === 'MAX_TOKENS' });
 }
