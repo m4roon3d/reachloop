@@ -27,10 +27,28 @@ async function callGemini(env, model, parts, wantJson) {
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
     body: JSON.stringify({
       contents: [{ role: 'user', parts }],
-      generationConfig: wantJson ? { responseMimeType: 'application/json' } : {}
+      generationConfig: { maxOutputTokens: 16384, ...(wantJson ? { responseMimeType: 'application/json' } : {}) }
     })
   });
 }
+
+// If the default model name is not available to this key, ask Google which Flash models it can use.
+let pickedModel = null;
+async function pickAvailableModel(env) {
+  if (pickedModel) return pickedModel;
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': env.GEMINI_API_KEY } });
+  if (!r.ok) return null;
+  const d = await r.json().catch(() => ({}));
+  const names = (d.models || [])
+    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map((m) => String(m.name || '').replace(/^models\//, ''))
+    .filter((n) => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding|robotics|preview|exp)/.test(n));
+  const ver = (n) => (n.match(/(\d+(?:\.\d+)?)/) || [0, 0])[1] * 1;
+  names.sort((a, b) => ver(b) - ver(a) || a.length - b.length);
+  pickedModel = names[0] || null;
+  return pickedModel;
+}
+const notFound = (status, data) => status === 404 || (status === 400 && /not (found|supported)|unknown model|is not available/i.test(String((data && data.error && data.error.message) || '')));
 
 export async function onRequestGet({ env }) {
   return json({ ok: true, configured: Boolean(env.GEMINI_API_KEY && env.APP_PASSCODE) });
@@ -54,21 +72,26 @@ export async function onRequestPost({ request, env }) {
     .slice(0, MAX_IMAGES);
   const parts = [...images.map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })), { text: prompt }];
 
-  let model = env.GEMINI_MODEL || DEFAULT_MODEL;
+  const started = Date.now();
+  let model = env.GEMINI_MODEL || pickedModel || DEFAULT_MODEL;
   let res = await callGemini(env, model, parts, Boolean(body.json));
-  if (res.status === 404 && model !== DEFAULT_MODEL) { model = DEFAULT_MODEL; res = await callGemini(env, model, parts, Boolean(body.json)); }
+  let data = await res.json().catch(() => null);
+  if (!res.ok && notFound(res.status, data)) {
+    const alt = await pickAvailableModel(env);
+    if (alt && alt !== model) { model = alt; res = await callGemini(env, model, parts, Boolean(body.json)); data = await res.json().catch(() => null); }
+  }
 
-  const data = await res.json().catch(() => null);
   if (!res.ok) {
     const detail = String((data && data.error && data.error.message) || '').slice(0, 300);
-    if (res.status === 429) return json({ error: 'rate_limited', detail }, 429);
-    if (res.status === 400 || res.status === 403) return json({ error: 'upstream_rejected', detail }, 502);
-    return json({ error: 'upstream', detail }, 502);
+    const info = { detail, status: res.status, model };
+    if (res.status === 429) return json({ error: 'rate_limited', ...info }, 429);
+    if (res.status === 400 || res.status === 403) return json({ error: 'upstream_rejected', ...info }, 502);
+    return json({ error: 'upstream', ...info }, 502);
   }
 
   const cand = data && data.candidates && data.candidates[0];
-  if (!cand) return json({ error: 'refused', detail: String((data && data.promptFeedback && data.promptFeedback.blockReason) || '') }, 422);
+  if (!cand) return json({ error: 'refused', model, detail: String((data && data.promptFeedback && data.promptFeedback.blockReason) || 'blocked') }, 422);
   const text = ((cand.content && cand.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
-  if (!text.trim()) return json({ error: cand.finishReason === 'SAFETY' ? 'refused' : 'empty', detail: cand.finishReason || '' }, cand.finishReason === 'SAFETY' ? 422 : 502);
-  return json({ text, model, truncated: cand.finishReason === 'MAX_TOKENS' });
+  if (!text.trim()) return json({ error: cand.finishReason === 'SAFETY' ? 'refused' : 'empty', model, detail: `finished with ${cand.finishReason || 'no text'}` }, cand.finishReason === 'SAFETY' ? 422 : 502);
+  return json({ text, model, ms: Date.now() - started, truncated: cand.finishReason === 'MAX_TOKENS' });
 }

@@ -261,6 +261,7 @@ function toast(msg){
   // an AI call rejected for a wrong passcode or missing setup says so, whatever the caller's generic message
   if(S&&Date.now()-(S.authFailAt||0)<3000) msg='Your AI passcode was not accepted. Update it in Profile → AI writing.';
   else if(S&&Date.now()-(S.notConfiguredAt||0)<3000) msg='AI is not set up on the server yet. Add the Gemini key and passcode in Cloudflare.';
+  else if(S&&S.aiErr&&Date.now()-S.aiErr.at<3000) msg='AI failed: '+S.aiErr.why.slice(0,220);
   const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
 
 const DEFAULT_SETTINGS={handle:'',niche:'',city:'',voice:'Storyteller',signature:'',language:'English',tagBank:'',gearLine:true,goal:4,
@@ -1918,15 +1919,18 @@ async function aiCall(prompt,opts={},wantJson=false){
   const d=await r.json().catch(()=>({}));
   if(r.status===401){ S.authFailAt=Date.now(); throw {code:'bad_passcode'} }
   if(r.status===503){ S.notConfiguredAt=Date.now(); throw {code:'not_configured'} }
-  if(r.status===429) throw {code:'rate_limited'};
-  if(r.status===422) throw {code:'refused'};
-  if(!r.ok||!d.text) throw {code:'upstream_error',message:d.detail||d.error||''};
+  const why=[d.error,d.status?('HTTP '+d.status):'',d.model?('model '+d.model):'',d.detail].filter(Boolean).join(' · ')||('HTTP '+r.status);
+  if(!r.ok||!d.text){ S.aiErr={at:Date.now(),why}; }
+  if(r.status===429) throw {code:'rate_limited',message:why};
+  if(r.status===422) throw {code:'refused',message:why};
+  if(!r.ok||!d.text) throw {code:'upstream_error',message:why};
+  S.aiErr=null; S.aiLastModel=d.model;
   if(opts.onText) try{ opts.onText({text:d.text,delta:d.text}) }catch(_){}
   return d;
 }
 function makeWebSample(){
   const f=async(prompt,opts)=>{ const d=await aiCall(prompt,opts,false); return {text:d.text,truncated:!!d.truncated,modelTierApplied:'default'} };
-  f.json=async(prompt,opts)=>parseLooseJSON((await aiCall(prompt,opts,true)).text);
+  f.json=async(prompt,opts)=>{ const d=await aiCall(prompt,opts,true); try{ return parseLooseJSON(d.text) }catch(e){ S.aiErr={at:Date.now(),why:`reply was not valid JSON (${d.text.length} chars${d.truncated?', cut short':''}, model ${d.model})`}; throw e } };
   f.limits=async()=>({maxPromptBytes:200000,images:{maxCount:12,maxInputBytes:20e6,mediaTypes:['image/jpeg']}});
   return f;
 }
@@ -1947,6 +1951,7 @@ function aiCardHTML(){
     <div class="row"><input type="password" id="aiPass" autocomplete="current-password" placeholder="Your reachloop passcode" value="${on?'••••••••':''}" style="max-width:260px" aria-label="AI passcode">
       <button class="btn ${on?'':'primary'}" id="aiPassSave">${on?'Change':'Turn on'}</button>${on?'<button class="btn ghost sm" id="aiPassOff">Turn off</button>':''}</div>
     <p class="small muted" style="margin:0" id="aiPassMsg"></p>
+    ${on?`<div class="row"><button class="btn sm" id="aiTest">Run a test</button><span class="small muted" id="aiTestOut">Sends a tiny request and shows exactly what comes back.</span></div>`:''}
   </div>`;
 }
 function bindAICard(m){
@@ -1960,6 +1965,12 @@ function bindAICard(m){
     else $('#aiPassMsg').textContent=t.why;
   };
   $('#aiPassOff')&&($('#aiPassOff').onclick=()=>{ setPass(''); S.sample=null; toast('AI writing is off'); renderProfile(m) });
+  $('#aiTest')&&($('#aiTest').onclick=async()=>{
+    const out=$('#aiTestOut'), btn=$('#aiTest'); btn.disabled=true; out.textContent='Waiting for Gemini…'; const t0=performance.now();
+    try{ const r=await S.sample.json('Reply with only this JSON: {"ok":true,"word":"ready"}',{}); out.textContent=`Works: ${JSON.stringify(r)} in ${((performance.now()-t0)/1000).toFixed(1)}s via ${S.aiLastModel||'Gemini'}.` }
+    catch(e){ out.textContent=`Failed after ${((performance.now()-t0)/1000).toFixed(1)}s: ${(S.aiErr&&S.aiErr.why)||e.code||'unknown error'}` }
+    btn.disabled=false;
+  });
 }
 
 /* ---------- photos shared into the app from the gallery (Android) ---------- */
