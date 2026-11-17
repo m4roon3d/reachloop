@@ -2,7 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="reachloop: plan, caption and grow your photography Instagram.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#ECEDEB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0F10" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="reachloop">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>reachloop</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2223%22%20fill%3D%22%23151718%22/%3E%3Cg%20transform%3D%22translate%2812%2012%29%20scale%28.76%29%22%3E%3Cpath%20d%3D%22M67.00%2020.56%20A34%2034%200%201%201%2030.50%2022.15%22%20fill%3D%22none%22%20stroke%3D%22%23FF5A4E%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22/%3E%3Cpolygon%20points%3D%2238.69%2C16.41%2035.37%2C29.11%2025.62%2C15.19%22%20fill%3D%22%23FF5A4E%22/%3E%3Cpolygon%20points%3D%2261.26%2C56.50%2050.00%2C63.00%2038.74%2C56.50%2038.74%2C43.50%2050.00%2C37.00%2061.26%2C43.50%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linejoin%3D%22round%22/%3E%3Cline%20x1%3D%2261.26%22%20y1%3D%2256.50%22%20x2%3D%2261.26%22%20y2%3D%2265.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2250.00%22%20y1%3D%2263.00%22%20x2%3D%2242.21%22%20y2%3D%2267.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2238.74%22%20y1%3D%2256.50%22%20x2%3D%2230.95%22%20y2%3D%2252.00%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2238.74%22%20y1%3D%2243.50%22%20x2%3D%2238.74%22%20y2%3D%2234.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2250.00%22%20y1%3D%2237.00%22%20x2%3D%2257.79%22%20y2%3D%2232.50%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3Cline%20x1%3D%2261.26%22%20y1%3D%2243.50%22%20x2%3D%2269.05%22%20y2%3D%2248.00%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,7 +55,7 @@ h3{font:700 12px/1.3 var(--body);letter-spacing:.07em;text-transform:uppercase;c
 .small{font-size:13px}
 
 /* top bar */
-.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .top-in{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
 .brand{font:800 24px/1 Manrope, system-ui, sans-serif;letter-spacing:-.02em;white-space:nowrap}
 .brand{display:flex;align-items:center;gap:8px}
@@ -390,7 +399,7 @@ async function storeImage(srcEl,maxEdge){
     try{ const a=await S.assets.upload(big.blob); return {src:a.url||('/_blob/'+a.id),assetId:a.id,w:big.w,h:big.h} }
     catch(e){ console.warn('asset upload failed',e) }
   }
-  const small=await toJpeg(srcEl,S.db?720:1440,.82);
+  const small=await toJpeg(srcEl,S.db?720:(IDB.db?2880:1440),IDB.db?.88:.82);
   return {src:await blobToDataURL(small.blob),w:big.w,h:big.h};
 }
 async function ingestFile(file,maxEdge=4096){
@@ -475,6 +484,28 @@ async function flush(docId){
     else { setSync('err'); toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete some old posts.':'Could not save. Check your connection.') }
   } finally { inflight.delete(docId); if(pend.has(docId)&&!timers[docId]) flush(docId) }
 }
+/* device storage: IndexedDB (no 5 MB cap), localStorage only as a last resort */
+const IDB={db:null,
+  open(){ return new Promise((res,rej)=>{
+    if(!window.indexedDB) return rej(new Error('no idb'));
+    const r=indexedDB.open('reachloop',1);
+    r.onupgradeneeded=()=>{ const d=r.result; for(const n of ['posts','shots','kv']) if(!d.objectStoreNames.contains(n)) d.createObjectStore(n,{keyPath:'id'}) };
+    r.onsuccess=()=>{ IDB.db=r.result; res(r.result) }; r.onerror=()=>rej(r.error); r.onblocked=()=>rej(new Error('blocked'));
+  }) },
+  all(store){ return new Promise((res,rej)=>{ const q=IDB.db.transaction(store).objectStore(store).getAll(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error) }) },
+  write(store,id,val){ return new Promise((res,rej)=>{ const t=IDB.db.transaction(store,'readwrite'), os=t.objectStore(store); if(val==null) os.delete(id); else os.put(val); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error) }) }
+};
+const localPend=new Map(); let localTimer=null;
+function localSave(store,id,val){
+  if(!IDB.db){ persistLocal(); return }
+  localPend.set(store+'|'+id,{store,id,val}); clearTimeout(localTimer); localTimer=setTimeout(flushLocal,500);
+}
+async function flushLocal(){
+  const jobs=[...localPend.values()]; localPend.clear();
+  for(const j of jobs){ try{ await IDB.write(j.store,j.id,j.val) }catch(e){ toast(e&&e.name==='QuotaExceededError'?'Your phone is out of space for reachloop. Delete old posts or back up and clear.':'Could not save on this device.') } }
+}
+window.addEventListener('pagehide',()=>{ if(localPend.size) flushLocal() });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&localPend.size) flushLocal() });
 function persistLocal(){
   try{ localStorage.setItem('contactsheet_v1',JSON.stringify({posts:[...S.posts.values()],shots:[...S.shots.values()],settings:S.settings})) }
   catch(_){ toast('This browser could not keep the post. It will last until you close the page.') }
@@ -484,13 +515,13 @@ function savePost(p){
   if(p.scheduledAt&&p.status==='draft') p.status='scheduled';
   if(!p.scheduledAt&&p.status==='scheduled') p.status='draft';
   S.posts.set(p.id,dbBody(p));
-  if(S.col) queueSave('p_'+p.id,dbBody(p)); else persistLocal();
+  if(S.col) queueSave('p_'+p.id,dbBody(p)); else localSave('posts',p.id,dbBody(p));
 }
 function deletePost(id){
   S.posts.delete(id);
-  if(S.col) queueSave('p_'+id,null); else persistLocal();
+  if(S.col) queueSave('p_'+id,null); else localSave('posts',id,null);
 }
-function saveSettings(){ if(S.col) queueSave('settings',dbBody(S.settings)); else persistLocal() }
+function saveSettings(){ if(S.col) queueSave('settings',dbBody(S.settings)); else localSave('kv','settings',{id:'settings',v:dbBody(S.settings)}) }
 function setSync(state){
   const el=$('#sync'); if(!el) return;
   const map={ok:['ok','Synced'],saving:['','Saving…'],err:['warn','Not saved'],local:['warn','This device only'],loading:['','Connecting…'],offline:['warn','Waiting for sync']};
@@ -500,13 +531,15 @@ function setSync(state){
 /* ---------- boot ---------- */
 async function boot(){
   renderNav(); go(location.hash.replace('#','')||'create');
-  let tries=0; while(!(window.claude&&window.claude.use)&&tries<30){await new Promise(r=>setTimeout(r,100));tries++}
-  if(!(window.claude&&window.claude.use)){ startLocal(); return }
+  // Claude only ever serves this page inside a frame; standalone (the installed app) starts straight away
+  const framed=(()=>{ try{ return window.top!==window }catch(_){ return true } })();
+  let tries=0; while(framed&&!(window.claude&&window.claude.use)&&tries<30){await new Promise(r=>setTimeout(r,100));tries++}
+  if(!(window.claude&&window.claude.use)) return startLocal();
   const use=n=>window.claude.use(n).catch(()=>null);
   const [db,user,assets,sample,dl]=await Promise.all([use('db'),use('user'),use('assets'),use('sample'),use('downloads')]);
   S.assets=assets; S.sample=sample; S.dl=dl;
   let uid=null; try{ uid=user?await user.id():null }catch(_){}
-  if(!db||!uid){ startLocal(); refreshAICard(); return }
+  if(!db||!uid){ await startLocal(); refreshAICard(); return }
   S.db=db; S.uid=uid; S.col=db.collection('data/users/'+uid);
   let first=true; const tm=setTimeout(()=>{ if(first) setSync('offline') },10000);
   S.col.onSnapshot(snap=>{
@@ -529,9 +562,28 @@ async function boot(){
   },e=>{ clearTimeout(tm); setSync('err'); if(e.code!=='revoked') toast('Sync stopped. Your changes on this page may not be saved.') });
   S.mode='db'; refreshAICard();
 }
-function startLocal(){
-  S.mode='local'; setSync('local');
-  try{ const raw=localStorage.getItem('contactsheet_v1'); if(raw){ const o=JSON.parse(raw); (o.posts||[]).forEach(p=>S.posts.set(p.id,p)); (o.shots||[]).forEach(x=>S.shots.set(x.id,x)); if(o.settings) S.settings={...S.settings,...o.settings} } }catch(_){}
+function applySettings(o){ S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...o,slots:{...DEFAULT_SETTINGS.slots,...((o&&o.slots)||{})}} }
+async function startLocal(){
+  S.mode='local'; S.web=!(window.claude&&window.claude.use); setSync('local');
+  let legacy=null; try{ const raw=localStorage.getItem('contactsheet_v1'); if(raw) legacy=JSON.parse(raw) }catch(_){}
+  try{
+    await IDB.open();
+    const [posts,shots,kv]=await Promise.all([IDB.all('posts'),IDB.all('shots'),IDB.all('kv')]);
+    if(!posts.length&&!shots.length&&!kv.length&&legacy){
+      // one-time move from the old browser storage
+      for(const p of legacy.posts||[]) await IDB.write('posts',p.id,p);
+      for(const x of legacy.shots||[]) await IDB.write('shots',x.id,x);
+      if(legacy.settings) await IDB.write('kv','settings',{id:'settings',v:legacy.settings});
+      try{ localStorage.removeItem('contactsheet_v1') }catch(_){}
+      return startLocal();
+    }
+    posts.forEach(p=>S.posts.set(p.id,p)); shots.forEach(x=>S.shots.set(x.id,x));
+    const st=kv.find(x=>x.id==='settings'); if(st) applySettings(st.v);
+    try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist() }catch(_){}
+  }catch(_){
+    IDB.db=null;
+    if(legacy){ (legacy.posts||[]).forEach(p=>S.posts.set(p.id,p)); (legacy.shots||[]).forEach(x=>S.shots.set(x.id,x)); if(legacy.settings) applySettings(legacy.settings) }
+  }
   render();
 }
 
@@ -564,7 +616,7 @@ function render(){
   else if(S.view==='reels') renderReels(m);
   else renderProfile(m);
 }
-function localBanner(){ return S.mode==='local'?`<div class="banner">Posts are kept in this browser only. Open this page in Claude while signed in to sync between your phone and desktop.</div>`:'' }
+function localBanner(){ return S.mode==='local'&&!S.web?`<div class="banner">Posts are kept in this browser only. Open this page in Claude while signed in to sync between your phone and desktop.</div>`:'' }
 
 /* ---------- editor ---------- */
 function newDraft(){
@@ -928,8 +980,26 @@ async function saveImages(){
       try{ await S.dl.save({filename:`${base}_${String(i+1).padStart(2,'0')}.jpg`,data:blobs[i]}) }
       catch(e){ if(e.code==='declined') break; if(e.code==='rate_limited'){ await new Promise(r=>setTimeout(r,1200)); i--; continue } toast('Saving is not available here. Press and hold the slides instead.'); break }
     }
+  } else {
+    // installed app / browser: one tap opens the phone's share sheet (Instagram, Save to Photos), else plain downloads
+    const files=blobs.map((b,i)=>new File([b],`${base}_${String(i+1).padStart(2,'0')}.jpg`,{type:'image/jpeg'}));
+    offerFiles($('#saveHint'),files,files.length>1?`Share or save ${files.length} slides`:'Share or save the photo');
   }
   btn.disabled=false; btn.textContent='Save images';
+}
+function canShareFiles(files){ try{ return !!(navigator.canShare&&navigator.canShare({files})) }catch(_){ return false } }
+function downloadFile(file){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=file.name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+}
+// share needs a fresh tap, so rendering happens first and this puts the actual share button in place
+function offerFiles(box,files,label){
+  if(!box) return;
+  const share=canShareFiles(files);
+  box.innerHTML=`<span class="row" style="margin-top:4px">${share?`<button class="btn primary" type="button" data-share>${esc(label)}</button>`:''}<button class="btn ${share?'ghost sm':''}" type="button" data-dl>${share?'Download instead':esc(label.replace('Share or save','Download'))}</button></span>${share?'<br><span class="muted small">Pick Instagram to post straight away, or Save to put them in Photos.</span>':''}`;
+  box.querySelector('[data-dl]').onclick=()=>{ files.forEach((f,i)=>setTimeout(()=>downloadFile(f),i*350)) };
+  const sb=box.querySelector('[data-share]');
+  if(sb) sb.onclick=async()=>{ try{ await navigator.share({files}) }catch(e){ if(e&&e.name!=='AbortError'){ toast('Sharing failed. Downloading instead.'); files.forEach((f,i)=>setTimeout(()=>downloadFile(f),i*350)) } } };
 }
 function gcalLink(p){
   if(!p.scheduledAt) return '';
@@ -1662,17 +1732,19 @@ function showReelOut(){
   const o=S.reelOut, b=$('#mkOut'); if(!b||!o) return;
   b.innerHTML=`<video class="rvid" src="${o.url}" controls playsinline loop muted></video>
     <div class="row"><button class="btn ink" id="rSave">Save ${o.ext.toUpperCase()}</button><button class="btn sm" id="rAsReel">Make this post a reel</button></div>
-    ${o.ext!=='mp4'?'<p class="small" style="margin:0;color:var(--accent)">This browser made a WebM file. Instagram wants MP4: use Chrome or Safari for this step.</p>':''}`;
-  $('#rSave').onclick=async()=>{
-    if(!S.dl){toast('Saving is not available here. Long-press the video instead.');return}
-    try{ await S.dl.save({filename:`${S.settings.handle||'reel'}_${new Date().toISOString().slice(0,10)}.${o.ext}`,data:o.blob}); toast('Saved') }
+    ${o.ext!=='mp4'?'<p class="small" style="margin:0;color:var(--accent)">This browser made a WebM file. Instagram wants MP4: use Chrome or Safari for this step.</p>':''}
+    <div id="rShare"></div>`;
+  const fname=`${S.settings.handle||'reel'}_${new Date().toISOString().slice(0,10)}.${o.ext}`;
+  if(!S.dl){ $('#rSave').remove(); offerFiles($('#rShare'),[new File([o.blob],fname,{type:o.blob.type||'video/mp4'})],'Share or save the reel') }
+  $('#rSave')&&($('#rSave').onclick=async()=>{
+    try{ await S.dl.save({filename:fname,data:o.blob}); toast('Saved') }
     catch(e){ if(e.code!=='declined') toast('Could not save the video here.') }
-  };
+  });
   $('#rAsReel').onclick=()=>{const p=D(); p.format='reel'; savePost(p); toast('Post set to Reel. Caption it in Create.')};
 }
 
 /* ---------- reels: shot lists ---------- */
-function saveShot(s){ s.updatedAt=Date.now(); S.shots.set(s.id,dbBody(s)); if(S.col) queueSave('sl_'+s.id,dbBody(s)); else persistLocal() }
+function saveShot(s){ s.updatedAt=Date.now(); S.shots.set(s.id,dbBody(s)); if(S.col) queueSave('sl_'+s.id,dbBody(s)); else localSave('shots',s.id,dbBody(s)) }
 function paintShots(){
   const box=$('#shots'); if(!box) return;
   if(box.contains(document.activeElement)&&document.activeElement.tagName==='INPUT'&&document.activeElement.type==='text') return;
@@ -1690,7 +1762,7 @@ function paintShots(){
   $('#slGo')&&($('#slGo').onclick=runShotList);
   $('#slList').addEventListener('toggle',e=>{const d=e.target; if(d.dataset&&d.dataset.sid){ if(d.open) S.openShot=d.dataset.sid; else if(S.openShot===d.dataset.sid) S.openShot=null }},true);
   $('#slList').onchange=e=>{const c=e.target.closest('[data-sk]'); if(!c) return; const [id,i]=c.dataset.sk.split('|'); const s={...S.shots.get(id)}; s.done={...(s.done||{}),[i]:c.checked}; saveShot(s); paintShots()};
-  $('#slList').onclick=e=>{const d=e.target.closest('[data-sdel]'); if(!d) return; if(d.dataset.armed){ S.shots.delete(d.dataset.sdel); if(S.col) queueSave('sl_'+d.dataset.sdel,null); else persistLocal(); paintShots() } else { d.dataset.armed='1'; d.textContent='Tap again to delete' }};
+  $('#slList').onclick=e=>{const d=e.target.closest('[data-sdel]'); if(!d) return; if(d.dataset.armed){ S.shots.delete(d.dataset.sdel); if(S.col) queueSave('sl_'+d.dataset.sdel,null); else localSave('shots',d.dataset.sdel,null); paintShots() } else { d.dataset.armed='1'; d.textContent='Tap again to delete' }};
 }
 function shotCard(s){
   const clips=Array.isArray(s.clips)?s.clips:[], done=s.done||{}, n=clips.filter((_,i)=>done[i]).length;
@@ -1761,14 +1833,84 @@ function renderProfile(m){
         <div id="placeList">${(s.places||[]).length?(s.places||[]).map((pl,i)=>`<div class="row" style="justify-content:space-between;padding:5px 0;border-top:1px solid var(--line)"><span><strong>${esc(pl.name)}</strong> <span class="mono muted">${(+pl.lat).toFixed(4)}, ${(+pl.lon).toFixed(4)}</span></span><span class="row" style="gap:4px"><a class="btn sm ghost" href="https://www.google.com/maps?q=${pl.lat},${pl.lon}" target="_blank" rel="noopener">Map ↗</a><button class="btn sm ghost danger" data-delpl="${i}">Remove</button></span></div>`).join(''):'<p class="muted small" style="margin:0">None yet. When a photo has GPS, type the place name in Create and tap "Save as a place". Photos taken within 300 m are then tagged for you.</p>'}</div></div>
       <div class="tip small">Reach basics that still work in 2026: post Reels alongside photos, reply to comments fast, and send good posts to friends; shares in DMs count as a strong signal.</div>
     </div>
-  </div>`;
+  </div>
+  ${S.mode==='local'?`<div class="card stack" style="margin-top:16px" id="deviceCard">
+    <div class="row" style="justify-content:space-between"><h3>This device</h3><span class="mono muted" id="usage"></span></div>
+    ${S.web?installBlock():''}
+    <p class="small" style="margin:0">Your posts and photos live on this ${S.web?'phone or computer':'browser'} only. Back up now and then, and use the backup file to move everything to another device.${backupAge()}</p>
+    <div class="row"><button class="btn primary" id="backupBtn">Back up everything</button><button class="btn" id="restoreBtn">Restore from a backup</button><input type="file" id="restorePick" accept=".json,application/json" class="hide"></div>
+    <div id="backupOut"></div>
+  </div>`:''}`;
+  if(S.mode==='local') bindDeviceCard(m);
   const bind=(id,k,ev='input')=>$('#'+id).addEventListener(ev,e=>{s[k]=e.target.type==='checkbox'?e.target.checked:e.target.value; if(k==='handle') s.handle=s.handle.replace(/^@/,'').trim(); saveSettings()});
   bind('pHandle','handle'); bind('pNiche','niche'); bind('pCity','city'); bind('pFol','followers');
   $('#placeList').onclick=e=>{const d=e.target.closest('[data-delpl]'); if(!d) return; s.places=(s.places||[]).filter((_,i)=>i!==+d.dataset.delpl); saveSettings(); renderProfile(m)}; bind('pVoice','voice','change'); bind('pLang','language'); bind('pSig','signature'); bind('pBank','tagBank'); bind('pGear','gearLine','change');
 }
 function refreshProfileBits(){ /* editor stays as-is during sync */ }
 
-boot();
+/* ---------- installed app: install, backup, restore ---------- */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; if(S.view==='profile'&&S.mode==='local') render() });
+window.addEventListener('appinstalled',()=>{ installEvt=null; toast('reachloop is on your home screen'); if(S.view==='profile') render() });
+const isStandalone=()=>{ try{ return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true }catch(_){ return false } };
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function installBlock(){
+  if(isStandalone()) return `<p class="small" style="margin:0"><span class="pill posted">Installed</span> You're using the home-screen app.</p>`;
+  if(installEvt) return `<div class="row"><button class="btn ink" id="installBtn">Install reachloop</button><span class="muted small">Adds it to your home screen; works offline.</span></div>`;
+  if(isIOS()) return `<p class="small" style="margin:0"><strong>Install on iPhone:</strong> open this page in Safari, tap Share, then <em>Add to Home Screen</em>.</p>`;
+  return `<p class="small" style="margin:0"><strong>Install:</strong> open your browser's menu and choose <em>Install app</em> or <em>Add to Home screen</em>.</p>`;
+}
+function backupAge(){
+  const t=S.settings.lastBackup; if(!t) return ' <strong>No backup yet.</strong>';
+  const d=Math.floor((Date.now()-t)/86400000);
+  return ` Last backup: ${d===0?'today':d===1?'yesterday':d+' days ago'}.${d>14?' <strong>Time for a fresh one.</strong>':''}`;
+}
+function bindDeviceCard(m){
+  (async()=>{ try{ const e=await navigator.storage.estimate(); const u=$('#usage'); if(u&&e&&e.usage!=null) u.textContent=`${(e.usage/1048576).toFixed(e.usage>1e8?0:1)} MB used` }catch(_){} })();
+  $('#installBtn')&&($('#installBtn').onclick=async()=>{ if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice }catch(_){} installEvt=null; render() });
+  $('#backupBtn').onclick=async()=>{
+    if(localPend.size) await flushLocal();
+    const data={app:'reachloop',version:1,exportedAt:new Date().toISOString(),posts:[...S.posts.values()],shots:[...S.shots.values()],settings:S.settings};
+    const name=`reachloop-backup-${new Date().toISOString().slice(0,10)}.json`;
+    const file=new File([JSON.stringify(data)],name,{type:'application/json'});
+    S.settings.lastBackup=Date.now(); saveSettings();
+    if(S.dl){ try{ await S.dl.save({filename:name,data:file}); toast('Backup saved') }catch(e){ if(e.code!=='declined') toast('Could not save the backup here.') } return }
+    $('#backupOut').innerHTML=`<p class="small" style="margin:0">${S.posts.size} posts, ${S.shots.size} shot lists, ${file.size<1048576?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/1048576).toFixed(1)+' MB'}. Keep it somewhere safe, like Google Drive.</p><div id="backupFile"></div>`;
+    offerFiles($('#backupFile'),[file],'Share or save the backup');
+  };
+  $('#restoreBtn').onclick=()=>$('#restorePick').click();
+  $('#restorePick').onchange=async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    let o; try{ o=JSON.parse(await f.text()) }catch(_){ toast('That file is not a reachloop backup.'); return }
+    if(!o||o.app!=='reachloop'||!Array.isArray(o.posts)){ toast('That file is not a reachloop backup.'); return }
+    let added=0, updated=0;
+    for(const p of o.posts){ if(!p||!p.id) continue; const cur=S.posts.get(p.id); if(!cur){added++} else if((p.updatedAt||0)>(cur.updatedAt||0)){updated++} else continue; S.posts.set(p.id,p); if(S.col) queueSave('p_'+p.id,p); else localSave('posts',p.id,p) }
+    for(const x of o.shots||[]){ if(!x||!x.id) continue; const cur=S.shots.get(x.id); if(cur&&(cur.updatedAt||0)>=(x.updatedAt||0)) continue; S.shots.set(x.id,x); if(S.col) queueSave('sl_'+x.id,x); else localSave('shots',x.id,x) }
+    if(o.settings){ const places=[...(S.settings.places||[])]; for(const pl of o.settings.places||[]) if(!places.some(q=>q.name===pl.name)) places.push(pl); applySettings({...o.settings,places,lastBackup:S.settings.lastBackup}); saveSettings() }
+    thumbCache.clear(); render(); toast(`Restored: ${added} new post${added===1?'':'s'}, ${updated} updated`);
+  };
+}
+
+/* ---------- photos shared into the app from the gallery (Android) ---------- */
+async function takeSharedFiles(){
+  if(!/[?&]shared=1/.test(location.search)||!('caches' in window)) return;
+  try{
+    const c=await caches.open('reachloop-share'), keys=await c.keys(), files=[];
+    for(const k of keys){ const r=await c.match(k); const b=await r.blob(); files.push(new File([b],decodeURIComponent(k.url.split('/').pop())||'shared',{type:b.type})); await c.delete(k) }
+    history.replaceState(null,'',location.pathname+'#create');
+    if(files.length){ S.draft=newDraft(); S.selImg=0; go('create'); await addFiles(files); toast(`${files.length} shared ${files.length>1?'files':'file'} added`) }
+  }catch(_){}
+}
+function registerSW(){
+  try{
+    const top=window.top===window, local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    if(!('serviceWorker' in navigator)||!top||(location.protocol!=='https:'&&!local)||/claude\.ai$|claudeusercontent\.com$|anthropic\.com$/.test(location.hostname)) return;
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }catch(_){}
+}
+
+registerSW();
+boot().then(takeSharedFiles);
 </script>
 </body>
 </html>

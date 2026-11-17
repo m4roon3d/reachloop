@@ -2,7 +2,9 @@
 
 **reachloop** is a personal Instagram helper for a photographer reviving their account. It helps you post good work consistently, learn from your own numbers, and get better reach without turning into a marketer.
 
-It runs today as a single-page web app inside Claude (a Claude artifact). This repo is its home as it grows into an installable phone app.
+It runs in two places from the same file:
+- **As an installable phone app** (PWA, hosted on Cloudflare Pages): works offline, keeps everything on your device, shares slides and reels straight to Instagram, and receives photos shared from your gallery on Android.
+- **Inside Claude** (a Claude artifact): syncs between devices and adds the Claude features (captions, reach check, reel ideas, shot lists).
 
 ## What it does
 
@@ -34,9 +36,18 @@ It runs today as a single-page web app inside Claude (a Claude artifact). This r
 
 ## How it runs
 
-`index.html` is the whole app: HTML, CSS and JavaScript in one file, no build step.
+`public/index.html` is the whole app: HTML, CSS and JavaScript in one file, no build step. Beside it in `public/`:
 
-Inside Claude it uses the artifact runtime (`window.claude.use(...)`) for:
+| File | Purpose |
+|---|---|
+| `manifest.webmanifest` | App name, icons, shortcuts, and the share target that receives photos from the gallery |
+| `sw.js` | Service worker: offline app shell, cached fonts and MP4 library, share target handling |
+| `icons/` | App icons (any, maskable, Apple touch) made from the aperture loop mark |
+| `_headers` | Cloudflare Pages cache rules so updates arrive promptly |
+
+**As a phone app** it stores posts, shot lists and settings in IndexedDB on the device. Profile has install help, storage used, and backup/restore (a single JSON file you can keep on Google Drive or move to another device). Saving slides or a reel opens the phone's share sheet, so you can post to Instagram or save to Photos in one tap.
+
+**Inside Claude** it uses the artifact runtime (`window.claude.use(...)`) for:
 
 | Capability | Used for |
 |---|---|
@@ -45,7 +56,11 @@ Inside Claude it uses the artifact runtime (`window.claude.use(...)`) for:
 | `sample` (with images) | Captions, reach checks, reel ideas, shot lists, place names, learnings |
 | `downloads` | Saving slides and MP4s |
 
-Opened in a normal browser, it falls back to this-device storage (localStorage) and hides the Claude features.
+Outside Claude the Claude features are hidden.
+
+## Deploy
+
+Cloudflare Pages, connected to this repo: production branch `main`, framework preset None, build command empty, build output directory `public`. Every push to `main` deploys. After changing anything in `public/`, bump `VERSION` in `public/sw.js` so installed apps refresh.
 
 External code: [`mp4-muxer`](https://github.com/Vanilagy/mp4-muxer) 5.2.2 from jsDelivr for MP4 export (WebCodecs, with a MediaRecorder fallback), and Google Fonts (Outfit, Manrope, JetBrains Mono).
 
@@ -58,6 +73,6 @@ External code: [`mp4-muxer`](https://github.com/Vanilagy/mp4-muxer) 5.2.2 from j
 
 ## Roadmap
 
-1. Installable web app (PWA): manifest, offline shell, home-screen icon, push reminders at posting times
+1. ~~Installable web app (PWA): manifest, offline shell, home-screen icon~~ (done); push reminders at posting times
 2. Own backend: Anthropic API for the Claude features, a database for sync, image storage
 3. Instagram Graph API: pull Insights automatically; optionally publish posts
