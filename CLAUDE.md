@@ -4,14 +4,21 @@ Personal Instagram helper for a photographer. `public/index.html` is the whole a
 
 It ships two ways from the same file:
 - **Installable web app (PWA)** on Cloudflare Pages: build output directory `public`, no build command. Data stays on the device (IndexedDB), with backup/restore in Profile. AI features run through the Pages Function `functions/api/ai.js`, which calls Gemini; the app talks to it through a stand-in for Claude's `sample` interface (`makeWebSample`), so every AI feature uses one code path.
-- **Claude artifact** at https://claude.ai/artifact/MyAyQv46hUBi5zB6gZzdmU (slug a9ce91f6-999d-4d6f-b4ea-221c2015d0ab): syncs via the artifact runtime and has the Claude features.
+- **Claude artifact**: syncs via the artifact runtime and has the Claude features. Its link and slug are in the private claude.ai Project "reachloop" (doc `claude/deploy-notes.md`), not in this public repo.
 
 ## Ship
 target: cloudflare
 merge: direct-to-main
 checks: `node --check` on the app script; unit-test functions/api/ai.js with a mocked fetch; serve public/ on localhost and load it in headless Chrome: no page errors; service worker registers; a post survives a reload; backup downloads and restores; AI passcode flow works against a mocked /api/ai
 release: bump VERSION in public/sw.js whenever any file in public/ changes
-preview: Cloudflare Pages deploys main automatically (production) and gives preview URLs for other branches; after pushing, also republish public/index.html to the Claude artifact above
+preview: Cloudflare Pages deploys main automatically (production) and gives preview URLs for other branches; after pushing, also republish public/index.html to the Claude artifact (link in the Project's deploy notes)
+
+## Public repo
+This repository is public. Never commit:
+- API keys, passcodes, tokens or any secret (they live only in Cloudflare; local secrets go in `.dev.vars`, which is gitignored)
+- personal details (email, phone, address, location history, photos)
+- unannounced plans, launch dates or business details for hodlr or other projects
+Before committing, scan the diff for anything that looks like a key (e.g. `AIza…`, `sk-…`) or personal data.
 
 ## Notes
 - Cloudflare secrets for AI: `GEMINI_API_KEY`, `APP_PASSCODE`; optional `GEMINI_MODEL` (defaults to `gemini-flash-latest`). Never put the key in the app or the repo.

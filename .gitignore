@@ -1,0 +1,15 @@
+# Secrets and local environment: never commit these (this repo is public)
+.env
+.env.*
+.dev.vars
+*.pem
+*.key
+secrets.*
+
+# Local tooling
+node_modules/
+.wrangler/
+.DS_Store
+
+# Personal data exports
+reachloop-backup-*.json
