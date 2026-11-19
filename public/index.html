@@ -61,6 +61,16 @@ h3{font:700 12px/1.3 var(--body);letter-spacing:.07em;text-transform:uppercase;c
 .brand{display:flex;align-items:center;gap:8px}
 .brand .logo{width:30px;height:30px;color:var(--ink);flex:0 0 auto}
 .brand b{font-weight:800;color:var(--accent)}
+.wswrap{position:relative}
+.wsbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 10px;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);max-width:170px}
+.wsbtn .wsname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wsbtn .dot{background:var(--accent);flex:0 0 auto}
+.wsmenu{position:absolute;left:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:45;min-width:230px;padding:6px;display:flex;flex-direction:column;gap:2px}
+.wsmenu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;color:var(--ink)}
+.wsmenu button:hover,.wsmenu button[aria-checked="true"]{background:var(--chip)}
+.wsmenu .sep{height:1px;background:var(--line);margin:4px 2px}
+@media (max-width:480px){ .sync span:last-child{display:none} .wsbtn{max-width:120px} }
+input[type=color]{width:44px;height:36px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer}
 .sync{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 .dot.ok{background:var(--ok)} .dot.warn{background:var(--amber)}
@@ -235,6 +245,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <body>
 <header class="top"><div class="top-in">
   <div class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><path d="M67.00 20.56 A34 34 0 1 1 30.50 22.15" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/><polygon points="38.69,16.41 35.37,29.11 25.62,15.19" fill="var(--accent)"/><polygon points="61.26,56.50 50.00,63.00 38.74,56.50 38.74,43.50 50.00,37.00 61.26,43.50" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/><line x1="61.26" y1="56.50" x2="61.26" y2="65.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="50.00" y1="63.00" x2="42.21" y2="67.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="38.74" y1="56.50" x2="30.95" y2="52.00" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="38.74" y1="43.50" x2="38.74" y2="34.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="50.00" y1="37.00" x2="57.79" y2="32.50" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><line x1="61.26" y1="43.50" x2="69.05" y2="48.00" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg><span>reach<b>loop</b></span></div>
+  <div class="wswrap"><button class="wsbtn" id="wsBtn" type="button" aria-haspopup="true" aria-expanded="false"><span class="dot" id="wsDot"></span><span class="wsname" id="wsName">Photography</span><span aria-hidden="true">▾</span></button><div class="wsmenu hide" id="wsMenu" role="menu"></div></div>
   <nav class="tabs" id="tabs" aria-label="Sections"></nav>
   <div class="sync" id="sync"><span class="dot"></span><span>Connecting…</span></div>
 </div></header>
@@ -271,9 +282,19 @@ const DEFAULT_SETTINGS={handle:'',niche:'',city:'',voice:'Storyteller',signature
   slots:{0:['10:00','18:30'],1:['08:00','19:30'],2:['08:00','13:00','19:30'],3:['08:00','19:30'],4:['08:00','13:00','19:30'],5:['08:00','20:00'],6:['10:00','18:30']}};
 
 let AI='Claude';
+const ASCI_FULL='Crypto products and NFTs are unregulated and can be highly risky. There may be no regulatory recourse for any loss from such transactions.';
+const ASCI_SHORT='Crypto products and NFTs are unregulated and risky.';
+const BRAND_DEFAULTS={wsName:'',kind:'personal',brief:'',audience:'',link:'',colors:{bg:'#0E0F10',fg:'#FFFFFF',accent:'#F5A623'},logo:'',compliance:{on:false,full:ASCI_FULL,short:ASCI_SHORT,onSlides:true},workspaces:[]};
+function normSettings(o){
+  o=o||{}; const d=JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), b=JSON.parse(JSON.stringify(BRAND_DEFAULTS));
+  return {...d,...b,...o,slots:{...d.slots,...(o.slots||{})},colors:{...b.colors,...(o.colors||{})},compliance:{...b.compliance,...(o.compliance||{})}};
+}
+const wsKey=id=>id==='main'?'settings':'settings_'+id;
+
 const S={db:null,col:null,uid:null,assets:null,sample:null,dl:null,mode:'loading',
-  posts:new Map(),shots:new Map(),settings:JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+  posts:new Map(),shots:new Map(),settings:null,allSettings:{},wsId:(()=>{ try{ return localStorage.getItem('reachloop_ws')||'main' }catch(_){ return 'main' } })(),
   view:'create',draft:null,selImg:0,reorder:false,sel:null,showGridMask:true,aiBusy:false,aiCtl:null,videos:{}};
+S.allSettings.main=normSettings(); S.settings=S.allSettings.main;
 
 /* ---------- EXIF (JPEG APP1) ---------- */
 function parseExif(buf){
@@ -530,7 +551,8 @@ function deletePost(id){
   S.posts.delete(id);
   if(S.col) queueSave('p_'+id,null); else localSave('posts',id,null);
 }
-function saveSettings(){ if(S.col) queueSave('settings',dbBody(S.settings)); else localSave('kv','settings',{id:'settings',v:dbBody(S.settings)}) }
+function saveSettingsFor(id){ const key=wsKey(id), body=dbBody(S.allSettings[id]); if(S.col) queueSave(key,body); else localSave('kv',key,{id:key,v:body}) }
+function saveSettings(){ saveSettingsFor(S.wsId) }
 function setSync(state){
   const el=$('#sync'); if(!el) return;
   const map={ok:['ok','Synced'],saving:['','Saving…'],err:['warn','Not saved'],local:['warn','This device only'],loading:['','Connecting…'],offline:['warn','Waiting for sync']};
@@ -554,7 +576,8 @@ async function boot(){
   S.col.onSnapshot(snap=>{
     const posts=new Map(), shots=new Map();
     for(const d of snap.docs){ const b=d.data(); if(!b) continue;
-      if(d.id==='settings') S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...b,slots:{...DEFAULT_SETTINGS.slots,...(b.slots||{})}};
+      if(d.id==='settings') S.allSettings.main=normSettings(pend.has('settings')&&pend.get('settings')?pend.get('settings'):b);
+      else if(d.id.startsWith('settings_')){ const id=d.id.slice(9); S.allSettings[id]=normSettings(pend.has(d.id)&&pend.get(d.id)?pend.get(d.id):b) }
       else if(d.id.startsWith('p_')) posts.set(b.id,b);
       else if(d.id.startsWith('sl_')) shots.set(b.id,b);
     }
@@ -563,7 +586,7 @@ async function boot(){
       if(id.startsWith('p_')){ if(body) posts.set(body.id,body); else posts.delete(id.slice(2)) }
       if(id.startsWith('sl_')){ if(body) shots.set(body.id,body); else shots.delete(id.slice(3)) }
     }
-    S.posts=posts; S.shots=shots;
+    S.posts=posts; S.shots=shots; syncWs();
     if(!snap.metadata.fromCache){ first=false; clearTimeout(tm); setSync('ok') }
     // views with text inputs keep focus: only repaint their lists
     const ae=document.activeElement, typing=ae&&$('#main').contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
@@ -571,7 +594,8 @@ async function boot(){
   },e=>{ clearTimeout(tm); setSync('err'); if(e.code!=='revoked') toast('Sync stopped. Your changes on this page may not be saved.') });
   S.mode='db'; refreshAICard();
 }
-function applySettings(o){ S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...o,slots:{...DEFAULT_SETTINGS.slots,...((o&&o.slots)||{})}} }
+function applySettings(o,id='main'){ S.allSettings[id]=normSettings(o) } // callers run syncWs() once everything is loaded
+function syncWs(){ if(!S.allSettings[S.wsId]) S.wsId='main'; S.settings=S.allSettings[S.wsId]; paintWsBtn() }
 async function startLocal(){
   S.mode='local'; S.web=!(window.claude&&window.claude.use); setSync('local'); enableWebAI();
   let legacy=null; try{ const raw=localStorage.getItem('contactsheet_v1'); if(raw) legacy=JSON.parse(raw) }catch(_){}
@@ -587,13 +611,108 @@ async function startLocal(){
       return startLocal();
     }
     posts.forEach(p=>S.posts.set(p.id,p)); shots.forEach(x=>S.shots.set(x.id,x));
-    const st=kv.find(x=>x.id==='settings'); if(st) applySettings(st.v);
+    for(const x of kv){ if(x.id==='settings') applySettings(x.v,'main'); else if(String(x.id).startsWith('settings_')) applySettings(x.v,x.id.slice(9)) }
+    syncWs();
     try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist() }catch(_){}
   }catch(_){
     IDB.db=null;
-    if(legacy){ (legacy.posts||[]).forEach(p=>S.posts.set(p.id,p)); (legacy.shots||[]).forEach(x=>S.shots.set(x.id,x)); if(legacy.settings) applySettings(legacy.settings) }
+    if(legacy){ (legacy.posts||[]).forEach(p=>S.posts.set(p.id,p)); (legacy.shots||[]).forEach(x=>S.shots.set(x.id,x)); if(legacy.settings) applySettings(legacy.settings); syncWs() }
   }
   render();
+}
+
+/* ---------- workspaces ---------- */
+function wsName(id){ const st=S.allSettings[id]; return (st&&st.wsName)||(id==='main'?'Photography':'New workspace') }
+function wsIds(){ const list=(S.allSettings.main.workspaces||[]).map(w=>w.id).filter(id=>S.allSettings[id]); return ['main',...list] }
+function wsColor(id){ const st=S.allSettings[id]; return st&&st.kind==='product'&&st.colors?st.colors.accent:'' }
+function paintWsBtn(){
+  const n=$('#wsName'), d=$('#wsDot'); if(!n||!S.settings) return;
+  n.textContent=wsName(S.wsId); d.style.background=wsColor(S.wsId)||'';
+}
+function paintWsMenu(){
+  const m=$('#wsMenu'); if(!m) return;
+  m.innerHTML=wsIds().map(id=>`<button role="menuitemradio" aria-checked="${id===S.wsId}" data-ws="${id}"><span class="dot" style="background:${esc(wsColor(id)||'var(--accent)')}"></span>${esc(wsName(id))}<span class="muted small" style="margin-left:auto">${wsPosts(id).length}</span></button>`).join('')
+    +`<div class="sep"></div><button data-wsnew="1">+ New workspace</button><button data-wsset="1">Workspace settings</button>`;
+}
+function closeWsMenu(){ const m=$('#wsMenu'); if(m) m.classList.add('hide'); $('#wsBtn')&&$('#wsBtn').setAttribute('aria-expanded','false') }
+function switchWs(id){
+  if(!S.allSettings[id]) id='main';
+  S.wsId=id; try{ localStorage.setItem('reachloop_ws',id) }catch(_){}
+  syncWs(); S.draft=null; S.reelOut=null; closeWsMenu(); render();
+}
+function createWorkspace(){
+  const id='w'+newId();
+  S.allSettings[id]=normSettings({wsName:'New brand',kind:'product'});
+  S.allSettings.main.workspaces=[...(S.allSettings.main.workspaces||[]),{id}];
+  saveSettingsFor(id); saveSettingsFor('main');
+  switchWs(id); go('profile'); toast('Workspace created. Give it a name and brand below.');
+}
+function deleteWorkspace(id){
+  if(id==='main') return;
+  for(const p of wsPosts(id)) deletePost(p.id);
+  for(const x of [...S.shots.values()].filter(x=>x.ws===id)){ S.shots.delete(x.id); if(S.col) queueSave('sl_'+x.id,null); else localSave('shots',x.id,null) }
+  S.allSettings.main.workspaces=(S.allSettings.main.workspaces||[]).filter(w=>w.id!==id); saveSettingsFor('main');
+  const key=wsKey(id); delete S.allSettings[id]; if(S.col) queueSave(key,null); else localSave('kv',key,null);
+  switchWs('main'); toast('Workspace deleted');
+}
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('#wsBtn');
+  if(btn){ const m=$('#wsMenu'); const open=m.classList.contains('hide'); if(open){ paintWsMenu(); m.classList.remove('hide') } else m.classList.add('hide'); btn.setAttribute('aria-expanded',String(open)); return }
+  const it=e.target.closest('#wsMenu button');
+  if(it){ if(it.dataset.ws) switchWs(it.dataset.ws); else if(it.dataset.wsnew) createWorkspace(); else if(it.dataset.wsset){ closeWsMenu(); go('profile') } return }
+  if(!e.target.closest('#wsMenu')) closeWsMenu();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeWsMenu() });
+function wsCardHTML(){
+  const st=S.settings, prod=st.kind==='product', c=st.compliance||{};
+  return `<div class="card stack" id="wsCard" style="margin-bottom:16px">
+    <div class="row" style="justify-content:space-between"><h3>Workspace</h3><span class="muted small">Each workspace keeps its own posts, grid, plan, voice and results.</span></div>
+    <div class="row" style="align-items:flex-end">
+      <label class="f" for="wsNameIn" style="flex:1;min-width:180px">Name <input type="text" id="wsNameIn" value="${esc(wsName(S.wsId))}"></label>
+      <label class="f" for="wsKind" style="min-width:180px">Type <select id="wsKind"><option value="personal" ${prod?'':'selected'}>Personal account</option><option value="product" ${prod?'selected':''}>Product or brand</option></select></label>
+    </div>
+    ${prod?`
+    <label class="f" for="wsBrief">What it is <span class="hint">One or two lines the AI reads before every post: what it does and why it matters.</span><textarea id="wsBrief" rows="2" placeholder="e.g. A personal crypto portfolio tracker: every wallet and exchange in one view, with real cost basis and P&amp;L.">${esc(st.brief)}</textarea></label>
+    <label class="f" for="wsAud">Who it's for <input type="text" id="wsAud" value="${esc(st.audience)}" placeholder="e.g. Indian crypto holders with coins on several exchanges"></label>
+    <label class="f" for="wsLink">Link <span class="hint">Website or waitlist, used in calls to action.</span><input type="text" id="wsLink" value="${esc(st.link)}" placeholder="https://"></label>
+    <div class="row" style="gap:14px">
+      <label class="small row" style="gap:6px">Background <input type="color" id="wsBg" value="${esc(st.colors.bg)}"></label>
+      <label class="small row" style="gap:6px">Text <input type="color" id="wsFg" value="${esc(st.colors.fg)}"></label>
+      <label class="small row" style="gap:6px">Accent <input type="color" id="wsAc" value="${esc(st.colors.accent)}"></label>
+    </div>
+    <div class="row">${st.logo?`<img src="${esc(st.logo)}" alt="Logo" style="width:44px;height:44px;object-fit:contain;border-radius:8px;background:${esc(st.colors.bg)}">`:''}
+      <button class="btn sm" id="wsLogoBtn" type="button">${st.logo?'Change logo':'Upload logo'}</button>${st.logo?'<button class="btn sm ghost" id="wsLogoDel" type="button">Remove</button>':''}
+      <input type="file" id="wsLogoPick" accept="image/*" class="hide"><span class="muted small">Square PNG with a transparent background works best.</span></div>
+    <div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px">
+      <label class="small row" style="gap:8px"><input type="checkbox" id="wsComp" ${c.on?'checked':''}> <strong>Crypto product:</strong> add India's ASCI risk disclaimer and check wording</label>
+      ${c.on?`<label class="f" for="wsFull">Disclaimer, added to every caption <textarea id="wsFull" rows="2">${esc(c.full)}</textarea></label>
+      <label class="f" for="wsShort">Short version for slides <input type="text" id="wsShort" value="${esc(c.short)}"></label>
+      <label class="small row" style="gap:8px"><input type="checkbox" id="wsOnSlides" ${c.onSlides?'checked':''}> Show the short version on carousel slides</label>
+      <p class="muted small" style="margin:0">Wording checks flag promises of returns, price talk and comparisons with regulated investments. This is a helper, not legal advice.</p>`:''}
+    </div>`:''}
+    ${S.wsId!=='main'?`<div><button class="btn sm danger ghost" id="wsDel" type="button">Delete this workspace and its ${wsPosts().length} posts</button></div>`:''}
+  </div>`;
+}
+function bindWsCard(m){
+  const st=S.settings, re=()=>renderProfile(m);
+  const t=(id,fn)=>{ const el=$('#'+id); if(el) el.addEventListener('input',()=>{ fn(el.value); saveSettings() }) };
+  t('wsNameIn',v=>{ st.wsName=v; paintWsBtn() });
+  $('#wsKind').onchange=e=>{ st.kind=e.target.value; saveSettings(); paintWsBtn(); re() };
+  t('wsBrief',v=>st.brief=v); t('wsAud',v=>st.audience=v); t('wsLink',v=>st.link=v.trim());
+  t('wsBg',v=>st.colors.bg=v); t('wsFg',v=>st.colors.fg=v); t('wsAc',v=>{ st.colors.accent=v; paintWsBtn() });
+  t('wsFull',v=>st.compliance.full=v); t('wsShort',v=>st.compliance.short=v);
+  $('#wsComp')&&($('#wsComp').onchange=e=>{ st.compliance.on=e.target.checked; saveSettings(); re() });
+  $('#wsOnSlides')&&($('#wsOnSlides').onchange=e=>{ st.compliance.onSlides=e.target.checked; saveSettings() });
+  $('#wsLogoBtn')&&($('#wsLogoBtn').onclick=()=>$('#wsLogoPick').click());
+  $('#wsLogoDel')&&($('#wsLogoDel').onclick=()=>{ st.logo=''; saveSettings(); re() });
+  $('#wsLogoPick')&&($('#wsLogoPick').onchange=async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    try{ const bmp=await loadBitmap(f), {w,h}=srcDims(bmp), sc=Math.min(1,256/Math.max(w,h)), c=cv(Math.round(w*sc),Math.round(h*sc));
+      c.getContext('2d').drawImage(bmp,0,0,c.width,c.height); st.logo=c.toDataURL('image/png'); saveSettings(); re() }
+    catch(_){ toast('That image could not be read.') }
+  });
+  let armed=false;
+  $('#wsDel')&&($('#wsDel').onclick=e=>{ if(!armed){ armed=true; e.target.textContent='Tap again to delete for good'; setTimeout(()=>{ armed=false; if(e.target.isConnected) e.target.textContent='Delete this workspace' },3500); return } deleteWorkspace(S.wsId) });
 }
 
 /* ---------- nav ---------- */
@@ -629,7 +748,7 @@ function localBanner(){ return S.mode==='local'&&!S.web?`<div class="banner">Pos
 
 /* ---------- editor ---------- */
 function newDraft(){
-  return {id:newId(),createdAt:Date.now(),updatedAt:Date.now(),status:'draft',format:'photo',ratio:'3:4',fit:'fill',border:'white',pad:4,slices:0,
+  return {id:newId(),ws:S.wsId,kind:'photo',createdAt:Date.now(),updatedAt:Date.now(),status:'draft',format:'photo',ratio:'3:4',fit:'fill',border:'white',pad:4,slices:0,
     images:[],notes:'',location:'',caption:'',hooks:[],tags:[],alt:[],firstComment:'',reel:null,carousel:null,tips:[],
     scheduledAt:null,postedAt:null,order:Date.now(),check:{}};
 }
@@ -637,7 +756,8 @@ function openPost(id){
   const p=S.posts.get(id); if(!p) return;
   S.draft=JSON.parse(JSON.stringify(p)); S.selImg=0; go('create');
 }
-function D(){ if(!S.draft) S.draft=newDraft(); return S.draft }
+function wsPosts(id=S.wsId){ return [...S.posts.values()].filter(p=>(p.ws||'main')===id) }
+function D(){ if(!S.draft||(S.draft.ws||'main')!==S.wsId) S.draft=newDraft(); return S.draft }
 function touch(){ const p=D(); if(p.images.length||p.caption||p.notes) savePost(p) }
 function autoFormat(p){ if(p.format!=='reel') p.format=(p.images.length>1||(p.fit==='split'&&p.images.length===1))?'carousel':'photo' }
 
@@ -648,13 +768,15 @@ function renderEditor(m){
     <div class="row">${!isNew?'<button class="btn sm" id="newPost">Start a new post</button>':''}</div></div>
   <div class="editor">
     <div class="ed-left stack">
-      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add photos or a video">
+      <div class="row">${seg('kindSeg',[['photo','Photos or video'],['text','Text carousel']],p.kind||'photo')}</div>
+      <div id="textBox" class="${p.kind==='text'?'':'hide'}"></div>
+      <div class="drop ${p.kind==='text'?'hide':''}" id="drop" tabindex="0" role="button" aria-label="Add photos or a video">
         <strong>${p.images.length?'Add more':'Add photos or a reel clip'}</strong>
         <span class="muted small">Up to 20 slides · JPEG/PNG/HEIC from your camera roll or Lightroom export · MP4/MOV for reels</span>
       </div>
-      <div class="strip" id="strip"></div>
+      <div class="strip ${p.kind==='text'?'hide':''}" id="strip"></div>
       <div id="formatBox" class="card stack ${p.images.length?'':'hide'}"></div>
-      <div id="focalBox" class="${p.images.length?'':'hide'}"></div>
+      <div id="focalBox" class="${p.images.length&&p.kind!=='text'?'':'hide'}"></div>
       <div id="previewBox" class="${p.images.length?'':'hide'}">
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Preview · as posted</h3>
           <label class="small row" style="gap:6px"><input type="checkbox" id="maskT" ${S.showGridMask?'checked':''}> Show profile-grid crop</label></div>
@@ -714,7 +836,7 @@ function renderEditor(m){
       </div>
     </div>
   </div>`;
-  bindEditor(); paintStrip(); paintFormat(); paintFocal(); paintSlides(); paintExif(); refreshAICard(); paintHooks(); paintTags(); paintAlt(); paintExtra(); paintFinal(); paintCal(); paintChecks(); paintResCard(); paintLoc();
+  bindEditor(); paintTextBox(); paintStrip(); paintFormat(); paintFocal(); paintSlides(); paintExif(); refreshAICard(); paintHooks(); paintTags(); paintAlt(); paintExtra(); paintFinal(); paintCal(); paintChecks(); paintResCard(); paintLoc();
 }
 function paintLoc(){
   const p=D(), b=$('#locHelp'); if(!b) return;
@@ -757,6 +879,7 @@ function statusPill(p){
 function bindEditor(){
   const p=D();
   $('#newPost')?.addEventListener('click',()=>{S.draft=newDraft();S.selImg=0;render()});
+  $('#kindSeg').onclick=e=>{ const v=e.target.dataset.v; if(!v||v===(p.kind||'photo')) return; p.kind=v; if(v==='text'){ p.fit='fill'; if(p.format==='reel') p.format='photo' } touch(); renderEditor($('#main')) };
   const drop=$('#drop'), pick=$('#filePick');
   drop.onclick=()=>pick.click(); drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick.click()}};
   ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
@@ -818,6 +941,13 @@ function paintStrip(){
 function seg(id,opts,val){return `<div class="seg" id="${id}" role="group">${opts.map(([v,l])=>`<button data-v="${v}" aria-pressed="${String(v)===String(val)}">${l}</button>`).join('')}</div>`}
 function paintFormat(){
   const p=D(), b=$('#formatBox'); if(!b||!p.images.length) return;
+  if(p.kind==='text'){
+    b.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Shape</h3><span class="pill">Carousel · ${p.images.length} slides</span></div>
+      <div class="row">${seg('ratioSeg',[['3:4','3:4 tall'],['4:5','4:5'],['1:1','1:1']],p.ratio)}</div>
+      <p class="muted small" style="margin:0">Slides are drawn at exactly this shape, so nothing gets cropped.</p>`;
+    $('#ratioSeg').onclick=async e=>{ const v=e.target.dataset.v; if(!v||v===p.ratio) return; p.ratio=v; await makeTextSlides(p); renderEditor($('#main')) };
+    return;
+  }
   const reel=p.format==='reel', single=p.images.length===1;
   b.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Format</h3><span class="pill">${reel?'Reel · 9:16':p.format==='carousel'?`Carousel · ${p.fit==='split'&&single?splitCount(p):p.images.length} slides`:'Single photo'}</span></div>
     <div class="row">${seg('fmtSeg',[['post','Feed post'],['reel','Reel']],reel?'reel':'post')}
@@ -957,6 +1087,7 @@ function finalCaption(p){
   const g=S.settings.gearLine&&p.images[0]?gearLine(p.images[0].exif):'';
   if(g&&!(p.caption||'').includes(g)) parts.push(g);
   if(S.settings.signature) parts.push(S.settings.signature.trim());
+  const cp=S.settings.compliance; if(cp&&cp.on&&(cp.full||'').trim()&&!(p.caption||'').includes(cp.full.trim())) parts.push(cp.full.trim());
   if(p.tags.length) parts.push(p.tags.map(t=>'#'+t).join(' '));
   return parts.filter(Boolean).join('\n\n');
 }
@@ -1031,6 +1162,44 @@ function paintChecks(){
   b.classList.toggle('hide',!(p.status==='posted'||p.scheduledAt));
 }
 
+/* ---------- product accounts and compliance ---------- */
+const isProduct=()=>S.settings&&S.settings.kind==='product';
+const complianceOn=()=>!!(S.settings&&S.settings.compliance&&S.settings.compliance.on);
+function complianceRules(){
+  return complianceOn()?`
+COMPLIANCE (crypto promotion in India, ASCI guidelines for virtual digital assets). These rules override everything else:
+- Never promise, imply or hint at returns, profit, gains, making money or getting rich; no "100x", "moon", "pump", "don't miss out".
+- No price predictions, price targets, or buy, sell or hold advice. Educational and tracking framing only.
+- Never downplay risk or call crypto safe, stable or guaranteed.
+- Never compare crypto with regulated investments such as stocks, mutual funds, fixed deposits or gold schemes.
+- Do not call crypto "currency" or "legal tender".
+- Do not write a risk disclaimer yourself; it is added automatically.`:'';
+}
+function productBlock(){
+  const s=S.settings; if(!isProduct()) return '';
+  return `
+PRODUCT ACCOUNT
+This is the Instagram account of ${s.wsName||'a product'}, not a photography account.
+What it is: ${s.brief||'(not described yet)'}
+Who it is for: ${s.audience||'(not said)'}
+Link: ${s.link||'(none yet)'}
+Approach: teach first with genuinely useful education about the problems the product solves, then show the product. Every post should be useful on its own, never just an ad.${complianceRules()}`;
+}
+const RISKY=[
+  [/\bguarantee(d|s)?\b/i,'guaranteed'],[/\bprofit(s|able)?\b/i,'profit'],[/\breturns?\b/i,'returns'],[/\b\d{2,}x\b/i,'100x-style multiples'],
+  [/\bto the moon\b|\bmoon(ing)?\b/i,'moon'],[/\bpump(ing|ed)?\b/i,'pump'],[/\bsure[- ]?shot\b/i,'sure shot'],[/\brisk[- ]?free\b|\bno risk\b/i,'risk-free'],
+  [/\bdouble your\b/i,'double your money'],[/\bpassive income\b/i,'passive income'],[/\bget rich\b|\bmake money\b|\bearn (big|daily|lakhs|crores)\b/i,'making money'],
+  [/\bbuy (now|the dip|before)\b|\bsell now\b|\bhold till\b/i,'buy or sell calls'],[/\bprice target\b|\bwill (hit|reach|cross|touch)\b/i,'price predictions'],
+  [/\bdon'?t miss\b|\bfomo\b|\blast chance\b/i,'urgency'],[/\bsafe(st)?\b|\bstable\b/i,'safe or stable'],
+  [/\b(better|safer) than (stocks?|fds?|fixed deposits?|mutual funds?|gold|shares)\b|\bvs\.? (stocks?|fds?|mutual funds?)\b/i,'comparison with regulated investments'],
+  [/\bcurrency\b|\blegal tender\b/i,'"currency"']
+];
+function riskyPhrases(p){
+  const txt=[p.caption,p.firstComment,...(p.hooks||[]),...((p.textSlides||[]).map(x=>(x.title||'')+' '+(x.body||''))),p.reelBuild&&p.reelBuild.hook].filter(Boolean).join('\n');
+  const hits=[]; for(const [re,label] of RISKY){ const m=re.exec(txt); if(m&&!hits.some(h=>h.label===label)) hits.push({label,word:m[0]}) }
+  return hits;
+}
+
 /* ---------- reach check ---------- */
 const SIG_LABEL={watch:'Watch time',sends:'Sends',saves:'Saves',discovery:'Discovery',basics:'Basics'};
 function capSig(p){ return JSON.stringify([p.caption,p.tags,p.firstComment,p.images.map(i=>i.src.slice(-30)),p.format,p.reelBuild&&p.reelBuild.hook]) }
@@ -1050,6 +1219,11 @@ function localChecks(p){
   if(p.format==='reel'&&p.reelBuild){ const d=reelPlan(p.reelBuild,p.reelBuild.order.length).total;
     add('Reel length','watch',d<=30?'strong':d<=60?'ok':'weak',`${d.toFixed(1)}s from the builder. Shorter reels are easier to finish and replay.`) }
   else if(p.format!=='reel') add('Shape','watch',p.ratio==='1:1'?'ok':'strong',p.ratio==='1:1'?'Square uses less of the feed than 3:4 or 4:5.':`${p.ratio} takes up the most screen in the feed.`);
+  if(complianceOn()){
+    const hits=riskyPhrases(p);
+    add('Wording','basics',hits.length?'weak':'strong',hits.length?`Risky for crypto promotion: ${hits.map(h=>'"'+h.word+'"').join(', ')}. Reword: no returns, prices, urgency or comparisons with regulated investments.`:'No risky crypto wording found.');
+    add('Risk disclaimer','basics',(S.settings.compliance.full||'').trim()?'strong':'weak',(S.settings.compliance.full||'').trim()?`Added to the caption automatically${p.kind==='text'&&S.settings.compliance.onSlides?', and shown on every slide':''}.`:'The disclaimer text is empty. Fill it in under Profile → Workspace.');
+  }
   const minW=Math.min(...p.images.map(i=>i.w||0));
   if(p.images.length&&minW<1080) add('Resolution','basics','ok',`A slide is only ${minW}px wide. Export at least 1080px for a crisp post.`);
   if(p.scheduledAt) add('Posting time','basics',inSlot(p.scheduledAt)?'strong':'ok',inSlot(p.scheduledAt)?`${fmtDT(p.scheduledAt)} is one of your best times.`:`${fmtDT(p.scheduledAt)} is outside your best times in Plan.`);
@@ -1103,10 +1277,11 @@ async function runReach(){
   try{
     const {blobs,labels}=await aiImages(p);
     const s=S.settings, rb=p.format==='reel'&&p.reelBuild?p.reelBuild:null;
-    const prompt=`You review an Instagram post before it goes live, for a personal photography account. Judge it against what Instagram's head has said drives ranking: watch time (does the first frame and hook stop the scroll; for reels, will people finish and replay), sends per reach (is there a reason to DM it to a friend; this matters most for reaching non-followers), saves (lasting value), likes per reach, and discovery (keywords people search, hashtags, location). Be honest and specific, do not inflate, and never promise virality.
+    const prompt=`You review an Instagram post before it goes live, for ${isProduct()?'a product brand account':'a personal photography account'}. Judge it against what Instagram's head has said drives ranking: watch time (does the first frame and hook stop the scroll; for reels, will people finish and replay), sends per reach (is there a reason to DM it to a friend; this matters most for reaching non-followers), saves (lasting value), likes per reach, and discovery (keywords people search, hashtags, location). Be honest and specific, do not inflate, and never promise virality.
 
 ACCOUNT: niche ${s.niche||'photography'}; city ${s.city||'not given'}; voice ${s.voice}; followers ${s.followers||'unknown'}.
 WHAT HAS WORKED FOR THIS ACCOUNT: ${learningsText()||'no data yet'}
+${productBlock()}${complianceOn()?'\nAlso check the wording against the compliance rules above and rate it as a "sends" or "discovery" check named "Compliance".':''}
 
 POST
 Format: ${p.format}${p.format==='carousel'?` (${p.images.length} slides${p.fit==='split'?', panorama split':''})`:''}; shape ${slideRatio(p)}
@@ -1163,8 +1338,176 @@ function paintResCard(){
   b.onclick=e=>{const s=e.target.closest('[data-rsave]'); if(!s) return; p.results=readResults(b); savePost(p); paintResCard(); toast('Results saved')};
 }
 
+/* ---------- text carousel maker ---------- */
+const SLIDE_TYPES=[['cover','Cover'],['content','Point'],['end','Last slide']];
+function slidesSig(p){ const st=S.settings, c=st.compliance||{}; return JSON.stringify([p.textSlides,p.ratio,st.colors,st.logo.length,st.handle,st.wsName,c.on&&c.onSlides?c.short:'',st.link]) }
+function paintTextBox(){
+  const p=D(), b=$('#textBox'); if(!b||p.kind!=='text') return;
+  const sl=p.textSlides||[], stale=sl.length&&p.images.length&&p.slidesSig!==slidesSig(p);
+  b.innerHTML=`<div class="card stack">
+    <div class="row" style="justify-content:space-between"><h3>Text carousel</h3><span class="muted small">${sl.length?sl.length+' slides':'Teach one idea in 5 to 8 slides'}</span></div>
+    <label class="f" for="tcTopic">Topic <input type="text" id="tcTopic" value="${esc(p.topic||'')}" placeholder="${isProduct()?'e.g. Why spreadsheets break when you track crypto':'e.g. 5 settings I use for street photos at night'}"></label>
+    <div class="row">${S.sample?`<button class="btn ${sl.length?'':'primary'}" id="tcDraft" type="button" ${S.tcBusy?'disabled':''}>${S.tcBusy?'Drafting…':sl.length?'Redraft with '+AI:'Draft slides with '+AI}</button>`:''}${sl.length?'':'<button class="btn ghost" id="tcBlank" type="button">Start blank</button>'}${S.tcBusy?'<span class="aiwait"><span class="spin"></span></span>':''}</div>
+    ${!S.sample&&!sl.length?`<p class="muted small" style="margin:0">${S.web?'Turn on AI writing in Profile to draft slides from a topic, or start blank.':'Drafting needs Claude; you can start blank.'}</p>`:''}
+    <div class="stack" id="tcList" style="gap:10px">${sl.map((x,i)=>`<div class="card" style="background:var(--bg);padding:10px">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="row" style="gap:6px"><span class="mono">${i+1}</span><select data-tt="${i}" aria-label="Slide ${i+1} type" style="width:auto;padding:4px 8px;font-size:13px">${SLIDE_TYPES.map(([v,l])=>`<option value="${v}" ${x.type===v?'selected':''}>${l}</option>`).join('')}</select></span>
+        <span class="row" style="gap:4px"><button class="btn sm ghost" data-tu="${i}" aria-label="Move slide ${i+1} up">↑</button><button class="btn sm ghost" data-td="${i}" aria-label="Move slide ${i+1} down">↓</button><button class="btn sm ghost danger" data-tx="${i}" aria-label="Remove slide ${i+1}">×</button></span></div>
+      <input type="text" data-tf="title" data-i="${i}" value="${esc(x.title||'')}" placeholder="${x.type==='cover'?'Hook: the title people stop for':'Title'}" aria-label="Slide ${i+1} title" style="font-weight:700;margin-bottom:6px">
+      <textarea data-tf="body" data-i="${i}" rows="${x.type==='content'?3:2}" placeholder="${x.type==='content'?'Text. Start lines with - for bullets':'Subtitle (optional)'}" aria-label="Slide ${i+1} text">${esc(x.body||'')}</textarea>
+    </div>`).join('')}</div>
+    ${sl.length?`<div class="row"><button class="btn sm" id="tcAdd" type="button">+ Add slide</button><button class="btn ink" id="tcMake" type="button">${p.images.length?'Update slides':'Make slides'}</button>${stale?'<span class="small" style="color:var(--amber)">Text changed: update the slides.</span>':''}</div>
+    <p class="muted small" style="margin:0">Uses this workspace's colours, logo and handle (Profile → Workspace)${complianceOn()&&S.settings.compliance.onSlides?', with the risk disclaimer on every slide':''}.</p>`:''}
+  </div>`;
+  const list=$('#tcList');
+  $('#tcTopic').oninput=e=>{ p.topic=e.target.value; touch() };
+  $('#tcBlank')&&($('#tcBlank').onclick=()=>{ p.textSlides=[{type:'cover',title:p.topic||'',body:''},{type:'content',title:'',body:''},{type:'content',title:'',body:''},{type:'end',title:'Save this for later',body:''}]; touch(); paintTextBox() });
+  $('#tcDraft')&&($('#tcDraft').onclick=draftSlides);
+  $('#tcAdd')&&($('#tcAdd').onclick=()=>{ const at=Math.max(0,sl.length-(sl[sl.length-1]&&sl[sl.length-1].type==='end'?1:0)); sl.splice(at,0,{type:'content',title:'',body:''}); p.textSlides=sl; touch(); paintTextBox() });
+  $('#tcMake')&&($('#tcMake').onclick=async()=>{ const bt=$('#tcMake'); bt.disabled=true; bt.textContent='Drawing slides…'; await makeTextSlides(p); renderEditor($('#main')); toast('Slides ready. Check the preview.') });
+  list.oninput=e=>{ const t=e.target; if(t.dataset.tf){ sl[+t.dataset.i][t.dataset.tf]=t.value; touch() } };
+  list.onchange=e=>{ const t=e.target; if(t.dataset.tt!=null){ sl[+t.dataset.tt].type=t.value; touch(); paintTextBox() } };
+  list.onclick=e=>{
+    const u=e.target.closest('[data-tu]'), d=e.target.closest('[data-td]'), x=e.target.closest('[data-tx]');
+    const mv=(i,j)=>{ if(j<0||j>=sl.length) return; [sl[i],sl[j]]=[sl[j],sl[i]]; touch(); paintTextBox() };
+    if(u) mv(+u.dataset.tu,+u.dataset.tu-1); else if(d) mv(+d.dataset.td,+d.dataset.td+1); else if(x){ sl.splice(+x.dataset.tx,1); touch(); paintTextBox() }
+  };
+}
+async function draftSlides(){
+  const p=D(); if(!S.sample||S.tcBusy) return;
+  if(!(p.topic||'').trim()){ toast('Type a topic first'); $('#tcTopic')&&$('#tcTopic').focus(); return }
+  S.tcBusy=true; paintTextBox();
+  const s=S.settings;
+  const prompt=`Make an Instagram text carousel that genuinely teaches. Topic: ${p.topic}
+ACCOUNT
+Handle: ${s.handle?'@'+s.handle:'not set'} · Niche: ${s.niche||'not given'} · Voice: ${s.voice} · Language: ${s.language||'English'}
+${productBlock()}
+Openers used recently (do not repeat their pattern): ${recentHooks().map(h=>'"'+h+'"').join('; ')||'none'}
+
+SLIDES: 6 to 8.
+- Slide 1, type "cover": a scroll-stopping title under 60 characters that promises a specific, useful payoff, and an optional subtitle under 80 characters.
+- Middle slides, type "content": one idea each. Title under 50 characters. Body under 220 characters; use lines starting with "- " for short bullet lists (at most 4 bullets). Concrete examples beat general advice.
+- Last slide, type "end": a one-line takeaway as the title, and a body that asks people to save or share it${s.link?' and mentions the link in bio':''}.
+- Plain language; explain any jargon. No emoji in titles. No hashtags on slides.
+
+ALSO WRITE THE POST
+- "caption": first line is a hook under 110 characters; then 2 or 3 short paragraphs that add context beyond the slides; end with one easy question. No hashtags. Under 900 characters.
+- "hooks": 3 alternative first lines; the first equals the caption's first line.
+- "hashtags": exactly 5, lowercase, without "#": ${isProduct()?'1 broad topic tag, 2 specific subject tags, 2 audience or community tags':'1 genre tag, 2 subject tags, 2 community tags'}. No spam tags.
+- "altText": one short plain description per slide.
+- "firstComment": one short comment to pin that starts a conversation.
+
+Reply with only JSON:
+{"slides":[{"type":"cover","title":"","body":""}],"caption":"","hooks":["","",""],"hashtags":["","","","",""],"altText":[""],"firstComment":""}`;
+  try{
+    const r=await S.sample.json(prompt,{kind:'carousel',cache:false});
+    const slides=(r&&Array.isArray(r.slides)?r.slides:[]).filter(x=>x&&(x.title||x.body)).slice(0,10).map(x=>({type:['cover','content','end'].includes(x.type)?x.type:'content',title:String(x.title||''),body:String(x.body||'')}));
+    if(!slides.length) throw {code:'invalid_json'};
+    p.textSlides=slides;
+    if(typeof r.caption==='string') p.caption=r.caption.trim();
+    if(Array.isArray(r.hooks)) p.hooks=r.hooks.filter(x=>typeof x==='string'&&x.trim()).slice(0,3);
+    if(Array.isArray(r.hashtags)) p.tags=[...new Set(r.hashtags.map(x=>normTag(String(x))).filter(Boolean))].slice(0,5);
+    if(typeof r.firstComment==='string') p.firstComment=r.firstComment;
+    await makeTextSlides(p);
+    if(Array.isArray(r.altText)) p.alt=p.images.map((_,i)=>String(r.altText[i]||p.alt[i]||''));
+    savePost(p); toast('Slides and caption drafted. Edit anything, then Update slides.');
+  }catch(e){
+    const msg={cancelled:'',rate_limited:`${AI} is busy or your usage limit was reached.`,invalid_json:'The draft came back garbled. Try again.'}[e&&e.code];
+    if(msg!=='') toast(msg||'Something went wrong. Try again.');
+  }
+  S.tcBusy=false; renderEditor($('#main'));
+}
+async function ensureSlideFonts(){ try{ await Promise.all(['500 40px Outfit','800 72px Outfit','900 100px Outfit'].map(f=>document.fonts.load(f))) }catch(_){} }
+const FONT=(w,sz)=>`${w} ${sz}px Outfit, system-ui, -apple-system, sans-serif`;
+function wrapText(x,text,maxW){
+  const out=[];
+  for(const para of String(text||'').split('\n')){
+    const bullet=/^\s*[-•]\s+/.test(para), body=para.replace(/^\s*[-•]\s+/,''), words=body.split(/\s+/).filter(Boolean), w=bullet?maxW-44:maxW;
+    if(!words.length){ out.push({t:'',bullet:false,first:true}); continue }
+    let line='', first=true;
+    for(const wd of words){ const t=line?line+' '+wd:wd; if(x.measureText(t).width>w&&line){ out.push({t:line,bullet,first}); first=false; line=wd } else line=t }
+    out.push({t:line,bullet,first});
+  }
+  return out;
+}
+function fitBlock(x,text,maxW,maxH,start,min,weight,lh){
+  for(let sz=start;sz>=min;sz-=2){ x.font=FONT(weight,sz); const lines=wrapText(x,text,maxW); if(lines.length*sz*lh<=maxH) return {sz,lines,h:lines.length*sz*lh} }
+  x.font=FONT(weight,min); const lines=wrapText(x,text,maxW); return {sz:min,lines,h:lines.length*min*lh};
+}
+function drawBlock(x,blk,left,top,weight,lh,color,accent){
+  x.font=FONT(weight,blk.sz); x.fillStyle=color; x.textBaseline='top';
+  blk.lines.forEach((ln,j)=>{
+    const y=top+j*blk.sz*lh;
+    if(ln.bullet){ if(ln.first){ x.fillStyle=accent; x.beginPath(); x.arc(left+12,y+blk.sz*0.55,blk.sz*0.16,0,Math.PI*2); x.fill(); x.fillStyle=color } x.fillText(ln.t,left+44,y) }
+    else x.fillText(ln.t,left,y);
+  });
+}
+async function renderTextSlide(sp,i,n,W,H,st,logoImg){
+  const c=cv(W,H), x=c.getContext('2d'), col=st.colors||BRAND_DEFAULTS.colors, M=Math.round(W*0.08), inner=W-2*M;
+  x.fillStyle=col.bg; x.fillRect(0,0,W,H);
+  // top bar: logo + handle, counter
+  let tx=M; const top=M, LG=Math.round(W*0.062);
+  if(logoImg){ const d=srcDims(logoImg), sc=Math.min(LG/d.w,LG/d.h); x.drawImage(logoImg,M,top+(LG-d.h*sc)/2,d.w*sc,d.h*sc); tx=M+LG+18 }
+  else { x.fillStyle=col.accent; x.fillRect(M,top+LG*0.3,LG*0.4,LG*0.4); tx=M+LG*0.4+16 }
+  x.textBaseline='middle'; x.font=FONT(700,Math.round(W*0.028)); x.fillStyle=col.fg; x.globalAlpha=.75;
+  const label=st.handle?'@'+st.handle:(st.wsName||''); x.fillText(label,tx,top+LG/2);
+  x.textAlign='right'; x.fillText(`${i+1}/${n}`,W-M,top+LG/2); x.textAlign='left'; x.globalAlpha=1;
+  // footer: disclaimer
+  const cp=st.compliance||{}; let foot=0;
+  if(st.kind==='product'&&cp.on&&cp.onSlides&&(cp.short||'').trim()){
+    x.font=FONT(500,Math.round(W*0.022)); const lines=wrapText(x,cp.short.trim(),inner).map(l=>l.t), lh=Math.round(W*0.022*1.35);
+    foot=lines.length*lh+Math.round(W*0.03);
+    x.fillStyle=col.fg; x.globalAlpha=.6; x.textBaseline='top'; lines.forEach((l,j)=>x.fillText(l,M,H-M-lines.length*lh+j*lh)); x.globalAlpha=1;
+  }
+  const areaTop=top+LG+Math.round(W*0.07), areaBot=H-M-foot-Math.round(W*0.05), areaH=areaBot-areaTop;
+  if(sp.type==='cover'){
+    const t=fitBlock(x,sp.title||'',inner,areaH*0.62,Math.round(W*0.105),Math.round(W*0.06),900,1.06);
+    const sub=sp.body?fitBlock(x,sp.body,inner,areaH*0.22,Math.round(W*0.042),Math.round(W*0.03),500,1.3):null;
+    const bar=Math.round(W*0.013), gap=Math.round(W*0.04), total=t.h+gap+bar+(sub?gap+sub.h:0);
+    let y=areaTop+Math.max(0,(areaH-total)/2-areaH*0.06);
+    drawBlock(x,t,M,y,900,1.06,col.fg,col.accent); y+=t.h+gap;
+    x.fillStyle=col.accent; x.fillRect(M,y,Math.round(W*0.1),bar); y+=bar+gap;
+    if(sub){ x.globalAlpha=.85; drawBlock(x,sub,M,y,500,1.3,col.fg,col.accent); x.globalAlpha=1 }
+    x.font=FONT(800,Math.round(W*0.03)); x.fillStyle=col.accent; x.textAlign='right'; x.textBaseline='bottom'; x.fillText('Swipe →',W-M,areaBot); x.textAlign='left';
+  } else if(sp.type==='end'){
+    const t=fitBlock(x,sp.title||'',inner,areaH*0.45,Math.round(W*0.085),Math.round(W*0.05),900,1.08);
+    const bd=sp.body?fitBlock(x,sp.body,inner,areaH*0.25,Math.round(W*0.04),Math.round(W*0.03),500,1.35):null;
+    const cta=st.link?'Link in bio':(st.handle?'Follow @'+st.handle:'Save this for later');
+    x.font=FONT(800,Math.round(W*0.034)); const pw=x.measureText(cta).width+Math.round(W*0.07), ph=Math.round(W*0.085);
+    const gap=Math.round(W*0.045), total=t.h+(bd?gap+bd.h:0)+gap+ph;
+    let y=areaTop+Math.max(0,(areaH-total)/2);
+    drawBlock(x,t,M,y,900,1.08,col.fg,col.accent); y+=t.h;
+    if(bd){ y+=gap; x.globalAlpha=.85; drawBlock(x,bd,M,y,500,1.35,col.fg,col.accent); x.globalAlpha=1; y+=bd.h }
+    y+=gap; x.fillStyle=col.accent; rrect(x,M,y,pw,ph,ph/2); x.fill();
+    x.fillStyle=col.bg; x.font=FONT(800,Math.round(W*0.034)); x.textBaseline='middle'; x.fillText(cta,M+Math.round(W*0.035),y+ph/2);
+  } else {
+    x.font=FONT(800,Math.round(W*0.032)); x.fillStyle=col.accent; x.textBaseline='top';
+    const num=String(i).padStart(2,'0'); x.fillText(num,M,areaTop); const numH=Math.round(W*0.032*1.6);
+    const t=fitBlock(x,sp.title||'',inner,areaH*0.34,Math.round(W*0.078),Math.round(W*0.048),800,1.1);
+    drawBlock(x,t,M,areaTop+numH,800,1.1,col.fg,col.accent);
+    const by=areaTop+numH+t.h+Math.round(W*0.04);
+    if(sp.body){ const bd=fitBlock(x,sp.body,inner,areaBot-by,Math.round(W*0.052),Math.round(W*0.03),500,1.38); x.globalAlpha=.9; drawBlock(x,bd,M,by,500,1.38,col.fg,col.accent); x.globalAlpha=1 }
+  }
+  return c;
+}
+async function makeTextSlides(p){
+  const sl=(p.textSlides||[]).filter(x=>(x.title||'').trim()||(x.body||'').trim()); if(!sl.length){ toast('Add some slide text first'); return }
+  await ensureSlideFonts();
+  const st=S.settings, [rw,rh]=RATIOS[p.ratio||'3:4'], W=1080, H=Math.round(W*rh/rw);
+  let logo=null; if(st.kind==='product'&&st.logo){ try{ logo=await getImg(st.logo) }catch(_){} }
+  const ims=[];
+  for(let i=0;i<sl.length;i++){
+    const c=await renderTextSlide(sl[i],i,sl.length,W,H,st,logo);
+    const stored=await storeImage(c,W);
+    ims.push({k:newId(),src:stored.src,assetId:stored.assetId||null,w:stored.w,h:stored.h,fx:.5,fy:.5,exif:{},name:`slide-${i+1}`});
+    imgCache.set(stored.src,Promise.resolve(c));
+  }
+  p.images=ims; p.fit='fill'; if(p.format==='reel') p.format='photo'; autoFormat(p);
+  p.alt=ims.map((_,i)=>p.alt[i]||[sl[i].title,sl[i].body].filter(Boolean).join('. ').replace(/\n/g,' ').slice(0,200));
+  p.slidesSig=slidesSig(p); savePost(p);
+}
+
 /* ---------- AI ---------- */
-function recentHooks(){ return [...S.posts.values()].filter(x=>x.caption&&x.id!==D().id).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,4).map(x=>x.caption.split('\n')[0]) }
+function recentHooks(){ return wsPosts().filter(x=>x.caption&&x.id!==D().id).sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,4).map(x=>x.caption.split('\n')[0]) }
 async function aiImages(p){
   const lim=await S.sample.limits().catch(()=>null);
   if(!(lim&&lim.images)) return {blobs:undefined,labels:[]};
@@ -1184,7 +1527,7 @@ async function aiImages(p){
 function buildPrompt(p,labels=[]){
   const s=S.settings, n=p.images.length, reel=p.format==='reel', car=p.format==='carousel';
   const ex=p.images.map((im,i)=>`Slide ${i+1}: ${exifParts(im.exif).join(', ')||'no camera data'}`).join('\n');
-  return `You write Instagram posts for a photographer's personal photography account (an Instagram Business account in the "Personal Blog" category). The goal is real reach and engagement in 2026 without sounding like a marketer.
+  return `${isProduct()?`You write Instagram posts for a product's brand account. The goal is a real audience in 2026: people follow because the posts teach them something, not because they are ads.`:`You write Instagram posts for a photographer's personal photography account (an Instagram Business account in the "Personal Blog" category). The goal is real reach and engagement in 2026 without sounding like a marketer.`}
 
 ACCOUNT
 Handle: ${s.handle?'@'+s.handle:'not set'}
@@ -1193,10 +1536,13 @@ Home city: ${s.city||'not given'}
 Caption voice: ${s.voice}
 Language(s): ${s.language||'English'}
 What has worked for this account so far (from their own results; lean into it): ${learningsText()||'no data yet'}
+${productBlock()}
 
 THIS POST
 Format: ${reel?'Reel (vertical video; the attached image is its cover frame)':car?`Carousel of ${n} slides${p.fit==='split'?' (one panorama split into seamless slides)':''}`:'Single photo'}
-Photographer's notes: ${p.notes||'(none; describe from the image without inventing facts like names or exact places)'}
+${isProduct()?'Notes':"Photographer's notes"}: ${p.notes||'(none; describe from the image without inventing facts like names or exact places)'}${p.kind==='text'&&p.textSlides?`
+The slides are a text carousel. Slide text:
+${p.textSlides.map((x,i)=>`${i+1}. ${x.title}${x.body?' | '+x.body.replace(/\n/g,' / '):''}`).join('\n')}`:''}
 Location: ${p.location||'(not given)'}
 ${shotContext(p)}
 Camera data:
@@ -1207,7 +1553,7 @@ ${labels.join('\n')||'(none)'}
 For video clips you see several frames across the clip: use them to understand the motion and story.
 
 RULES
-- Instagram allows at most 5 hashtags per post. Return exactly 5, lowercase, without "#": 1 photography-genre tag, 2 subject or style tags, 2 place or community tags. Never use #explore, #viral, #reels, #instagood, #photooftheday or similar spam tags.
+- Instagram allows at most 5 hashtags per post. Return exactly 5, lowercase, without "#": ${isProduct()?'1 broad topic tag, 2 specific subject tags, 2 audience or community tags':'1 photography-genre tag, 2 subject or style tags, 2 place or community tags'}. Never use #explore, #viral, #reels, #instagood, #photooftheday or similar spam tags.
 - Instagram search reads captions: weave in the plain words people search (subject, place, genre) naturally.
 - "caption": the first line is the hook (under 110 characters, makes people tap "more", no hashtags). Then 2 to 4 short paragraphs, honest and specific to what is in the photo, at most 2 emoji, ending with one easy question that invites a comment. Do not include hashtags, camera settings or a signature; they are added separately. Under 1100 characters. Use line breaks between paragraphs.
 - "hooks": 3 alternative first lines in different styles (curiosity, story, observation). The first one must equal the caption's first line.
@@ -1259,7 +1605,7 @@ function templateDraft(){
 
 /* ---------- scheduling ---------- */
 function nextFreeSlot(exceptId){
-  const taken=new Set([...S.posts.values()].filter(x=>x.id!==exceptId&&x.scheduledAt&&x.status!=='posted').map(x=>new Date(x.scheduledAt).toDateString()));
+  const taken=new Set(wsPosts().filter(x=>x.id!==exceptId&&x.scheduledAt&&x.status!=='posted').map(x=>new Date(x.scheduledAt).toDateString()));
   const now=Date.now()+30*60000;
   for(let d=0;d<21;d++){
     const day=new Date(); day.setHours(0,0,0,0); day.setDate(day.getDate()+d);
@@ -1275,7 +1621,7 @@ function weekStart(ts){const d=new Date(ts);d.setHours(0,0,0,0);d.setDate(d.getD
 
 /* ---------- grid view ---------- */
 function gridOrder(){
-  const all=[...S.posts.values()].filter(p=>p.images&&p.images.length);
+  const all=wsPosts().filter(p=>p.images&&p.images.length);
   const drafts=all.filter(p=>p.status==='draft'&&!p.scheduledAt).sort((a,b)=>b.order-a.order);
   const sched=all.filter(p=>p.status!=='posted'&&p.scheduledAt).sort((a,b)=>b.scheduledAt-a.scheduledAt);
   const posted=all.filter(p=>p.status==='posted').sort((a,b)=>(b.postedAt||b.scheduledAt||0)-(a.postedAt||a.scheduledAt||0));
@@ -1334,7 +1680,7 @@ $('#pastPick').onchange=async e=>{
 
 /* ---------- plan view ---------- */
 function renderPlan(m){
-  const all=[...S.posts.values()], s=S.settings, now=Date.now();
+  const all=wsPosts(), s=S.settings, now=Date.now();
   const ws=weekStart(now);
   const postedWeek=all.filter(p=>p.status==='posted'&&(p.postedAt||0)>=ws).length;
   const queued=all.filter(p=>p.status!=='posted'&&p.scheduledAt).sort((a,b)=>a.scheduledAt-b.scheduledAt);
@@ -1407,7 +1753,7 @@ function resultsSection(all){
 }
 async function runLearnings(m){
   if(!S.sample||S.learnBusy) return;
-  const rows=[...S.posts.values()].filter(p=>p.status==='posted'&&!p.imported&&p.results&&rates(p).base).sort((a,b)=>a.postedAt-b.postedAt);
+  const rows=wsPosts().filter(p=>p.status==='posted'&&!p.imported&&p.results&&rates(p).base).sort((a,b)=>a.postedAt-b.postedAt);
   S.learnBusy=true; renderPlan(m);
   const line=p=>{const r=rates(p), d=new Date(p.postedAt), R=p.results;
     return `${d.toISOString().slice(0,10)} ${DAYS[d.getDay()]} ${pad2(d.getHours())}:00 | ${p.format}${p.format==='reel'&&p.reelBuild?'/'+p.reelBuild.template:''}${p.format==='carousel'?'/'+p.images.length+' slides':''} | ${slideRatio(p)} | hook: "${(p.caption||'').split('\n')[0].slice(0,90)}" | tags: ${p.tags.join(' ')} | reach ${r.base} | views ${R.views||'?'} | watch ${r.watch??'?'}s | likes ${fmtPc(r.likes)} | comments ${R.comments??'?'} | saves ${fmtPc(r.saves)} | sends ${fmtPc(r.sends)} | follows ${R.follows??'?'}`};
@@ -1603,10 +1949,10 @@ function paintIdeaCtl(){
 }
 function ideasPrompt(p,labels){
   const s=S.settings;
-  return `You are a reels director helping a photographer who finds it hard to come up with reel ideas. Their Instagram is a personal photography account.
+  return `You are a reels director helping ${isProduct()?'a founder promote their product':'a photographer'} who finds it hard to come up with reel ideas. Their Instagram is a personal photography account.
 
 ACCOUNT
-Handle: ${s.handle?'@'+s.handle:'not set'} · Niche: ${s.niche||'photography'} · City: ${s.city||'not given'} · Voice: ${s.voice}
+Handle: ${s.handle?'@'+s.handle:'not set'} · Niche: ${s.niche||'photography'} · City: ${s.city||'not given'} · Voice: ${s.voice}${productBlock()}
 
 MATERIAL (in slide order)
 ${labels.join('\n')||'(no images attached)'}
@@ -1758,7 +2104,7 @@ function saveShot(s){ s.updatedAt=Date.now(); S.shots.set(s.id,dbBody(s)); if(S.
 function paintShots(){
   const box=$('#shots'); if(!box) return;
   if(box.contains(document.activeElement)&&document.activeElement.tagName==='INPUT'&&document.activeElement.type==='text') return;
-  const list=[...S.shots.values()].sort((a,b)=>b.createdAt-a.createdAt);
+  const list=[...S.shots.values()].filter(x=>(x.ws||'main')===S.wsId).sort((a,b)=>b.createdAt-a.createdAt);
   const f=S.shotForm||{};
   box.innerHTML=`<h3>Shot list for your next outing</h3>
     <p class="muted small" style="margin:0">Film these short clips alongside your photos and the reel is already half made.</p>
@@ -1810,7 +2156,7 @@ Reply with only JSON:
   try{
     const r=await S.sample.json(prompt,{cache:false});
     if(!r||!Array.isArray(r.clips)) throw {code:'invalid_json'};
-    const doc={id:newId(),createdAt:Date.now(),where:f.where||'',when:f.when||'',what:f.what||'',title:String(r.title||f.where||'Shot list'),summary:String(r.summary||''),
+    const doc={id:newId(),ws:S.wsId,createdAt:Date.now(),where:f.where||'',when:f.when||'',what:f.what||'',title:String(r.title||f.where||'Shot list'),summary:String(r.summary||''),
       clips:r.clips.slice(0,14).map(c=>({shot:String(c.shot||''),seconds:c.seconds||'',how:String(c.how||''),use:String(c.use||'')})),
       stills:(r.stills||[]).map(String).slice(0,8),reels:(r.reels||[]).slice(0,3).map(x=>({name:String(x.name||''),uses:String(x.uses||'')})),sound:String(r.sound||''),tips:(r.tips||[]).map(String).slice(0,4),done:{}};
     saveShot(doc); S.openShot=doc.id; S.shotForm={}; toast('Shot list ready');
@@ -1829,7 +2175,7 @@ function renderProfile(m){
   <div class="two">
     <div class="card stack">
       <label class="f" for="pHandle">Instagram handle <input type="text" id="pHandle" value="${esc(s.handle)}" placeholder="without @"></label>
-      <label class="f" for="pNiche">What you shoot <span class="hint">Your niche in a few words. Specific grows faster than "photography".</span><input type="text" id="pNiche" value="${esc(s.niche)}" placeholder="e.g. street and temple architecture, South India"></label>
+      <label class="f" for="pNiche">${s.kind==='product'?'Topic or niche':'What you shoot'} <span class="hint">${s.kind==='product'?'The subject your posts teach, in a few words.':'Your niche in a few words. Specific grows faster than "photography".'}</span><input type="text" id="pNiche" value="${esc(s.niche)}" placeholder="e.g. street and temple architecture, South India"></label>
       <label class="f" for="pCity">Home city <input type="text" id="pCity" value="${esc(s.city)}" placeholder="e.g. Bengaluru"></label>
       <label class="f" for="pFol">Followers, roughly <span class="hint">Used for advice like Trial Reels (1,000+ followers).</span><input type="number" id="pFol" min="0" value="${esc(s.followers||'')}" placeholder="e.g. 850"></label>
       <label class="f" for="pVoice">Caption voice <select id="pVoice">${['Storyteller','Minimal','Poetic','Technical (gear and settings forward)','Witty','Warm and personal'].map(v=>`<option ${v===s.voice?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -1852,6 +2198,7 @@ function renderProfile(m){
     <div id="backupOut"></div>
   </div>`:''}`;
   if(S.mode==='local') bindDeviceCard(m);
+  const vh=$('.view-head',m); if(vh){ vh.insertAdjacentHTML('afterend',wsCardHTML()); bindWsCard(m) }
   if(S.web){ m.insertAdjacentHTML('beforeend',aiCardHTML()); bindAICard(m) }
   const bind=(id,k,ev='input')=>$('#'+id).addEventListener(ev,e=>{s[k]=e.target.type==='checkbox'?e.target.checked:e.target.value; if(k==='handle') s.handle=s.handle.replace(/^@/,'').trim(); saveSettings()});
   bind('pHandle','handle'); bind('pNiche','niche'); bind('pCity','city'); bind('pFol','followers');
@@ -1881,7 +2228,7 @@ function bindDeviceCard(m){
   $('#installBtn')&&($('#installBtn').onclick=async()=>{ if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice }catch(_){} installEvt=null; render() });
   $('#backupBtn').onclick=async()=>{
     if(localPend.size) await flushLocal();
-    const data={app:'reachloop',version:1,exportedAt:new Date().toISOString(),posts:[...S.posts.values()],shots:[...S.shots.values()],settings:S.settings};
+    const data={app:'reachloop',version:1,exportedAt:new Date().toISOString(),posts:[...S.posts.values()],shots:[...S.shots.values()],settings:S.allSettings.main,allSettings:S.allSettings};
     const name=`reachloop-backup-${new Date().toISOString().slice(0,10)}.json`;
     const file=new File([JSON.stringify(data)],name,{type:'application/json'});
     S.settings.lastBackup=Date.now(); saveSettings();
@@ -1897,7 +2244,10 @@ function bindDeviceCard(m){
     let added=0, updated=0;
     for(const p of o.posts){ if(!p||!p.id) continue; const cur=S.posts.get(p.id); if(!cur){added++} else if((p.updatedAt||0)>(cur.updatedAt||0)){updated++} else continue; S.posts.set(p.id,p); if(S.col) queueSave('p_'+p.id,p); else localSave('posts',p.id,p) }
     for(const x of o.shots||[]){ if(!x||!x.id) continue; const cur=S.shots.get(x.id); if(cur&&(cur.updatedAt||0)>=(x.updatedAt||0)) continue; S.shots.set(x.id,x); if(S.col) queueSave('sl_'+x.id,x); else localSave('shots',x.id,x) }
-    if(o.settings){ const places=[...(S.settings.places||[])]; for(const pl of o.settings.places||[]) if(!places.some(q=>q.name===pl.name)) places.push(pl); applySettings({...o.settings,places,lastBackup:S.settings.lastBackup}); saveSettings() }
+    if(o.allSettings&&typeof o.allSettings==='object'){
+      for(const [id,v] of Object.entries(o.allSettings)){ if(!v) continue; S.allSettings[id]=normSettings({...v,lastBackup:(S.allSettings[id]||{}).lastBackup}); saveSettingsFor(id) }
+      syncWs();
+    } else if(o.settings){ const cur=S.allSettings.main, places=[...(cur.places||[])]; for(const pl of o.settings.places||[]) if(!places.some(q=>q.name===pl.name)) places.push(pl); S.allSettings.main=normSettings({...o.settings,places,lastBackup:cur.lastBackup}); saveSettingsFor('main'); syncWs() }
     thumbCache.clear(); render(); toast(`Restored: ${added} new post${added===1?'':'s'}, ${updated} updated`);
   };
 }

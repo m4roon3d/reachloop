@@ -8,6 +8,16 @@ It runs in two places from the same file:
 
 ## What it does
 
+**Workspaces**
+- Run several accounts from one app (for example your photography and a product's brand account), each with its own posts, grid, plan, voice, hashtags, results and AI context
+- Product workspaces add a short brief (what it is, who it's for, link), brand colours and a logo
+- Optional crypto compliance for India: adds the ASCI risk disclaimer to captions and slides, flags risky wording (returns, prices, urgency, comparisons with regulated investments) and gives the AI matching rules. A helper, not legal advice
+
+**Text carousels**
+- Type a topic and the AI drafts 6 to 8 teaching slides plus the caption, hashtags, alt text and first comment
+- Edit every slide (cover, points with bullets, last slide with a call to action) and redraw them in the workspace's brand style
+
+
 **Create**
 - Add up to 20 photos or a reel clip; camera data (body, lens, focal length, aperture, shutter, ISO), GPS and date taken are read from the files
 - Crop to 3:4, 4:5 or 1:1 with a tap-to-set focus point, add white, black or blurred borders, or split a panorama into a seamless carousel
