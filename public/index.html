@@ -663,6 +663,8 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('#wsMenu')) closeWsMenu();
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeWsMenu() });
+// free backup (Nemotron via OpenRouter) logs prompts, so it defaults to off for product workspaces
+function allowBackup(){ const v=S.settings.aiBackup; return (v===undefined||v===null)?S.settings.kind!=='product':!!v }
 function wsCardHTML(){
   const st=S.settings, prod=st.kind==='product', c=st.compliance||{};
   return `<div class="card stack" id="wsCard" style="margin-bottom:16px">
@@ -690,6 +692,9 @@ function wsCardHTML(){
       <label class="small row" style="gap:8px"><input type="checkbox" id="wsOnSlides" ${c.onSlides?'checked':''}> Show the short version on carousel slides</label>
       <p class="muted small" style="margin:0">Wording checks flag promises of returns, price talk and comparisons with regulated investments. This is a helper, not legal advice.</p>`:''}
     </div>`:''}
+    ${S.web?`<div class="stack" style="gap:4px;border-top:1px solid var(--line);padding-top:10px">
+      <label class="small row" style="gap:8px"><input type="checkbox" id="wsBackup" ${allowBackup()?'checked':''}> Use the free AI backup (NVIDIA Nemotron) when Gemini is busy</label>
+      <p class="muted small" style="margin:0">The free backup's provider may log what you send, so it starts off for product workspaces. Leave it off for anything not yet announced.</p></div>`:''}
     ${S.wsId!=='main'?`<div><button class="btn sm danger ghost" id="wsDel" type="button">Delete this workspace and its ${wsPosts().length} posts</button></div>`:''}
   </div>`;
 }
@@ -703,6 +708,7 @@ function bindWsCard(m){
   t('wsFull',v=>st.compliance.full=v); t('wsShort',v=>st.compliance.short=v);
   $('#wsComp')&&($('#wsComp').onchange=e=>{ st.compliance.on=e.target.checked; saveSettings(); re() });
   $('#wsOnSlides')&&($('#wsOnSlides').onchange=e=>{ st.compliance.onSlides=e.target.checked; saveSettings() });
+  $('#wsBackup')&&($('#wsBackup').onchange=e=>{ st.aiBackup=e.target.checked; saveSettings() });
   $('#wsLogoBtn')&&($('#wsLogoBtn').onclick=()=>$('#wsLogoPick').click());
   $('#wsLogoDel')&&($('#wsLogoDel').onclick=()=>{ st.logo=''; saveSettings(); re() });
   $('#wsLogoPick')&&($('#wsLogoPick').onchange=async e=>{
@@ -2282,7 +2288,7 @@ async function aiCall(prompt,opts={},wantJson=false){
     const images=opts.images?await Promise.all([].concat(opts.images).filter(Boolean).slice(0,12).map(b64)):[];
     let r;
     try{
-      r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json','x-passcode':getPass()},body:JSON.stringify({prompt:typeof prompt==='string'?prompt:prompt.map(m=>m.content).join('\n\n'),images,json:wantJson}),signal:ctl.signal});
+      r=await fetch('/api/ai',{method:'POST',headers:{'content-type':'application/json','x-passcode':getPass()},body:JSON.stringify({prompt:typeof prompt==='string'?prompt:prompt.map(m=>m.content).join('\n\n'),images,json:wantJson,backup:allowBackup()}),signal:ctl.signal});
     }catch(e){
       if(timedOut) throw fail('upstream_error',`timeout · no answer after ${AI_TIMEOUT_MS/1000}s`);
       if(e&&e.name==='AbortError'){ aiLog({at:t0,ms:Date.now()-t0,ok:false,why:'stopped',kind}); throw {code:'cancelled'} }

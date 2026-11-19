@@ -2,9 +2,12 @@
 // this calls Gemini with the key kept as a Cloudflare secret, and returns the text.
 //
 // Secrets / variables (Cloudflare → reachloop project → Settings → Variables and Secrets):
-//   GEMINI_API_KEY  (secret)   your Gemini API key
-//   APP_PASSCODE    (secret)   a passcode you choose; the app sends it with every request
-//   GEMINI_MODEL    (optional) a specific model id; defaults to Google's current Flash alias
+//   GEMINI_API_KEY     (secret)   your Gemini API key
+//   APP_PASSCODE       (secret)   a passcode you choose; the app sends it with every request
+//   GEMINI_MODEL       (optional) a specific Gemini model id; by default the newest available Flash
+//   OPENROUTER_API_KEY (secret, optional) enables the free backup (NVIDIA Nemotron via OpenRouter),
+//                      used only when Gemini fails and the app asks for it (per workspace setting)
+//   OPENROUTER_MODEL   (optional) backup model id to try first
 
 const DEFAULT_MODEL = 'gemini-flash-latest';
 const MAX_IMAGES = 12;
@@ -70,11 +73,11 @@ let workingModel = null; // last model that answered, tried first next time
 const notFound = (status, data) => status === 404 || (status === 400 && /not (found|supported)|unknown model|is not available/i.test(String((data && data.error && data.error.message) || '')));
 
 export async function onRequestGet({ env }) {
-  return json({ ok: true, configured: Boolean(env.GEMINI_API_KEY && env.APP_PASSCODE) });
+  return json({ ok: true, configured: Boolean((env.GEMINI_API_KEY || env.OPENROUTER_API_KEY) && env.APP_PASSCODE), backup: Boolean(env.OPENROUTER_API_KEY) });
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!env.GEMINI_API_KEY || !env.APP_PASSCODE) return json({ error: 'not_configured' }, 503);
+  if (!(env.GEMINI_API_KEY || env.OPENROUTER_API_KEY) || !env.APP_PASSCODE) return json({ error: 'not_configured' }, 503);
   if (!sameSecret(request.headers.get('x-passcode') || '', env.APP_PASSCODE)) {
     await new Promise((r) => setTimeout(r, 400)); // slow down guessing
     return json({ error: 'bad_passcode' }, 401);
@@ -113,11 +116,63 @@ async function generate(env, body) {
   const images = (Array.isArray(body.images) ? body.images : [])
     .filter((d) => typeof d === 'string' && d.length < 8_000_000)
     .slice(0, MAX_IMAGES);
-  const parts = [...images.map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })), { text: prompt }];
-
-  const started = Date.now();
   const wantJson = Boolean(body.json);
-  const BUDGET_MS = 125_000;       // whole request, well inside the app's 170s limit
+  const started = Date.now();
+  const backupOK = Boolean(body.backup && env.OPENROUTER_API_KEY);
+
+  const first = env.GEMINI_API_KEY
+    ? await geminiGenerate(env, prompt, images, wantJson, backupOK ? 95_000 : 125_000)
+    : out({ error: 'not_configured', detail: 'No Gemini key set' }, 503);
+  if (first.httpStatus === 200 || !backupOK || first.error === 'refused') return first;
+
+  // Gemini failed: try the free backup with the time that is left (everything stays under ~150s)
+  const backup = await openRouterGenerate(env, prompt, images, 150_000 - (Date.now() - started));
+  if (backup.httpStatus === 200) return { ...backup, ms: Date.now() - started, note: `Gemini failed (${first.error}); the free backup answered` };
+  return { ...first, detail: `${first.detail || first.error}; backup: ${backup.detail || backup.error}` };
+}
+
+// Free backup through OpenRouter (NVIDIA Nemotron vision models). Free endpoints log prompts,
+// so the app only asks for this where the workspace allows it.
+const BACKUP_MODELS = ['nvidia/nemotron-3.5-super-vl:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
+async function openRouterGenerate(env, prompt, images, budgetMs) {
+  const models = [...new Set([env.OPENROUTER_MODEL, ...BACKUP_MODELS].filter(Boolean))];
+  const started = Date.now(), notes = [];
+  for (const model of models) {
+    const left = budgetMs - (Date.now() - started);
+    if (left < 8_000) { notes.push('out of time'); break; }
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        signal: AbortSignal.timeout(Math.min(left, 60_000)),
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENROUTER_API_KEY}`, 'x-title': 'reachloop' },
+        body: JSON.stringify({
+          model,
+          max_tokens: 8192,
+          reasoning: { effort: 'low', exclude: true },
+          messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, ...images.map((d) => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${d}` } }))] }]
+        })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || (data && data.error)) {
+        notes.push(`${model}: HTTP ${res.status}${data && data.error && data.error.message ? ' ' + String(data.error.message).slice(0, 90) : ''}`);
+        continue;
+      }
+      const choice = data && data.choices && data.choices[0];
+      let text = choice && choice.message && choice.message.content;
+      if (Array.isArray(text)) text = text.map((p) => p.text || '').join('');
+      text = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      if (!text) { notes.push(`${model}: empty reply`); continue; }
+      return out({ text, model: `backup:${model}`, backup: true, truncated: choice.finish_reason === 'length' });
+    } catch (e) {
+      notes.push(`${model}: ${e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'no answer in time' : 'network error'}`);
+    }
+  }
+  return out({ error: 'backup_failed', detail: notes.join('; ') || 'no backup model answered' }, 502);
+}
+
+async function geminiGenerate(env, prompt, images, wantJson, BUDGET_MS) {
+  const parts = [...images.map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })), { text: prompt }];
+  const started = Date.now();
   const PER_MODEL_MS = Number(env.AI_PER_MODEL_MS) || 40_000; // a model that has not answered by then is treated as busy
   const slow = (st) => st === 503 || st === 500 || st === 502 || st === 504 || st === 524 || st === 429;
   const listed = env.GEMINI_MODEL ? [] : await availableModels(env);

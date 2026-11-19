@@ -21,7 +21,7 @@ This repository is public. Never commit:
 Before committing, scan the diff for anything that looks like a key (e.g. `AIza…`, `sk-…`) or personal data.
 
 ## Notes
-- Cloudflare secrets for AI: `GEMINI_API_KEY`, `APP_PASSCODE`; optional `GEMINI_MODEL` (defaults to `gemini-flash-latest`). Never put the key in the app or the repo.
+- Cloudflare secrets for AI: `GEMINI_API_KEY`, `APP_PASSCODE`; optional `GEMINI_MODEL`; optional `OPENROUTER_API_KEY` (free NVIDIA Nemotron backup, used only when Gemini fails and the workspace allows it; free endpoints log prompts, so it defaults off for product workspaces) and `OPENROUTER_MODEL`. Never put keys in the app or the repo.
 - UI text says `${AI}` ("Claude" inside Claude, "AI" in the installed app); prompts stay model-neutral.
 - Keep the app one self-contained file; PWA extras live beside it in public/ (manifest.webmanifest, sw.js, icons/, _headers).
 - The code must run in both places: inside Claude (`window.claude.use`, framed) and standalone (no `window.claude`). Never register the service worker inside Claude.

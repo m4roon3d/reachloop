@@ -72,7 +72,7 @@ It runs in two places from the same file:
 
 Cloudflare Pages, connected to this repo: production branch `main`, framework preset None, build command empty, build output directory `public`. Every push to `main` deploys, including `functions/`.
 
-Secrets (Settings → Variables and Secrets, Production): `GEMINI_API_KEY` and `APP_PASSCODE`; optionally `GEMINI_MODEL` to pin a model (default `gemini-flash-latest`). Redeploy after adding them. After changing anything in `public/`, bump `VERSION` in `public/sw.js` so installed apps refresh.
+Secrets (Settings → Variables and Secrets, Production): `GEMINI_API_KEY` and `APP_PASSCODE`; optionally `GEMINI_MODEL` to pin a model. Optional free backup: `OPENROUTER_API_KEY` (and `OPENROUTER_MODEL`) lets NVIDIA Nemotron answer when every Gemini model is busy; each workspace decides whether it may be used, because free endpoints log prompts. Redeploy after adding secrets. After changing anything in `public/`, bump `VERSION` in `public/sw.js` so installed apps refresh.
 
 External code: [`mp4-muxer`](https://github.com/Vanilagy/mp4-muxer) 5.2.2 from jsDelivr for MP4 export (WebCodecs, with a MediaRecorder fallback), and Google Fonts (Outfit, Manrope, JetBrains Mono).
 

@@ -1,6 +1,6 @@
 // reachloop service worker: offline app shell + receiving photos shared from the gallery.
 // Bump VERSION whenever the shell files change so phones pick up the new cache.
-const VERSION = 'reachloop-v7';
+const VERSION = 'reachloop-v8';
 const SHELL = [
   './',
   './index.html',
