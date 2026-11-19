@@ -576,8 +576,8 @@ async function boot(){
   S.col.onSnapshot(snap=>{
     const posts=new Map(), shots=new Map();
     for(const d of snap.docs){ const b=d.data(); if(!b) continue;
-      if(d.id==='settings') S.allSettings.main=normSettings(pend.has('settings')&&pend.get('settings')?pend.get('settings'):b);
-      else if(d.id.startsWith('settings_')){ const id=d.id.slice(9); S.allSettings[id]=normSettings(pend.has(d.id)&&pend.get(d.id)?pend.get(d.id):b) }
+      if(d.id==='settings') putSettings('main',pend.has('settings')&&pend.get('settings')?pend.get('settings'):b);
+      else if(d.id.startsWith('settings_')){ const id=d.id.slice(9); putSettings(id,pend.has(d.id)&&pend.get(d.id)?pend.get(d.id):b) }
       else if(d.id.startsWith('p_')) posts.set(b.id,b);
       else if(d.id.startsWith('sl_')) shots.set(b.id,b);
     }
@@ -594,7 +594,8 @@ async function boot(){
   },e=>{ clearTimeout(tm); setSync('err'); if(e.code!=='revoked') toast('Sync stopped. Your changes on this page may not be saved.') });
   S.mode='db'; refreshAICard();
 }
-function applySettings(o,id='main'){ S.allSettings[id]=normSettings(o) } // callers run syncWs() once everything is loaded
+function putSettings(id,o){ const n=normSettings(o), cur=S.allSettings[id]; if(!cur){ S.allSettings[id]=n; return } for(const k of Object.keys(cur)) if(!(k in n)) delete cur[k]; Object.assign(cur,n) } // update in place so open views keep editing the live copy
+function applySettings(o,id='main'){ putSettings(id,o) } // callers run syncWs() once everything is loaded
 function syncWs(){ if(!S.allSettings[S.wsId]) S.wsId='main'; S.settings=S.allSettings[S.wsId]; paintWsBtn() }
 async function startLocal(){
   S.mode='local'; S.web=!(window.claude&&window.claude.use); setSync('local'); enableWebAI();
