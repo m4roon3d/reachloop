@@ -240,6 +240,14 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .shot.done .what{text-decoration:line-through;color:var(--muted)}
 .ordchips{display:flex;gap:4px;flex-wrap:wrap}
 .ordchips img{width:34px;height:44px;object-fit:cover;border-radius:4px}
+.row.wrap{flex-wrap:wrap}
+.kw{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border-radius:999px;padding:3px 10px;font-size:13px}
+.kw.on{background:color-mix(in srgb,var(--ok) 16%,var(--chip))}
+.nrow{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:center}
+.nrow img{width:38px;height:50px;object-fit:cover;border-radius:4px}
+.sbshot{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.sbshot img{width:44px;height:58px;object-fit:cover;border-radius:5px}
+.ovsel{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:3px 6px;font-size:13px}
 </style>
 </head>
 <body>
@@ -293,7 +301,7 @@ const wsKey=id=>id==='main'?'settings':'settings_'+id;
 
 const S={db:null,col:null,uid:null,assets:null,sample:null,dl:null,mode:'loading',
   posts:new Map(),shots:new Map(),settings:null,allSettings:{},wsId:(()=>{ try{ return localStorage.getItem('reachloop_ws')||'main' }catch(_){ return 'main' } })(),
-  view:'create',draft:null,selImg:0,reorder:false,sel:null,showGridMask:true,aiBusy:false,aiCtl:null,videos:{}};
+  view:'create',draft:null,selImg:0,reorder:false,sel:null,showGridMask:true,overlay:'off',studioBusy:null,studioCtl:null,aiBusy:false,aiCtl:null,videos:{}};
 S.allSettings.main=normSettings(); S.settings=S.allSettings.main;
 
 /* ---------- EXIF (JPEG APP1) ---------- */
@@ -786,7 +794,8 @@ function renderEditor(m){
       <div id="focalBox" class="${p.images.length&&p.kind!=='text'?'':'hide'}"></div>
       <div id="previewBox" class="${p.images.length?'':'hide'}">
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Preview · as posted</h3>
-          <label class="small row" style="gap:6px"><input type="checkbox" id="maskT" ${S.showGridMask?'checked':''}> Show profile-grid crop</label></div>
+          <div class="row wrap" style="gap:10px"><label class="small row" style="gap:6px"><input type="checkbox" id="maskT" ${S.showGridMask?'checked':''}> Show profile-grid crop</label>
+          <select id="ovSel" class="ovsel" aria-label="Preview overlay"><option value="off" ${S.overlay==='off'?'selected':''}>No overlay</option><option value="feed" ${S.overlay==='feed'?'selected':''}>Feed 4:5 crop</option><option value="reel" ${S.overlay==='reel'?'selected':''}>Reel / Story safe zones</option></select></div></div>
         <div class="slides" id="slides"></div>
       </div>
     </div>
@@ -814,6 +823,7 @@ function renderEditor(m){
           <p class="muted small">In Instagram: Advanced settings → Accessibility → Write alt text.</p></details>
         <div id="extraBox" class="stack"></div>
       </div>
+      <div class="card stack" id="studioCard"></div>
       <div class="card stack">
         <div class="row" style="justify-content:space-between"><h3>Ready to post</h3><label class="small row" style="gap:6px"><input type="checkbox" id="gearT" ${S.settings.gearLine?'checked':''}> Add camera line</label></div>
         <div class="final" id="final"></div>
@@ -843,7 +853,7 @@ function renderEditor(m){
       </div>
     </div>
   </div>`;
-  bindEditor(); paintTextBox(); paintStrip(); paintFormat(); paintFocal(); paintSlides(); paintExif(); refreshAICard(); paintHooks(); paintTags(); paintAlt(); paintExtra(); paintFinal(); paintCal(); paintChecks(); paintResCard(); paintLoc();
+  bindEditor(); paintTextBox(); paintStrip(); paintFormat(); paintFocal(); paintSlides(); paintExif(); refreshAICard(); paintHooks(); paintTags(); paintAlt(); paintExtra(); paintStudio(); paintFinal(); paintCal(); paintChecks(); paintResCard(); paintLoc();
 }
 function paintLoc(){
   const p=D(), b=$('#locHelp'); if(!b) return;
@@ -893,6 +903,7 @@ function bindEditor(){
   ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
   drop.addEventListener('drop',e=>addFiles([...e.dataTransfer.files]));
   $('#maskT').onchange=e=>{S.showGridMask=e.target.checked;paintSlides()};
+  $('#ovSel').onchange=e=>{S.overlay=e.target.value;paintSlides()};
   $('#notes').oninput=e=>{p.notes=e.target.value;touch()};
   $('#loc').oninput=e=>{p.location=e.target.value;p.locSource='typed';touch();clearTimeout(S._lt);S._lt=setTimeout(paintLoc,400)};
   $('#cap').oninput=e=>{p.caption=e.target.value;touch();paintFinal()};
@@ -941,7 +952,7 @@ function paintStrip(){
     const t=e.target.closest('.thumb'); if(t){S.selImg=+t.dataset.i; paintStrip(); paintFocal(); return}
     if(e.target.id==='mvL'||e.target.id==='mvR'){
       const i=S.selImg, j=e.target.id==='mvL'?i-1:i+1; if(j<0||j>=p.images.length) return;
-      [p.images[i],p.images[j]]=[p.images[j],p.images[i]]; [p.alt[i],p.alt[j]]=[p.alt[j],p.alt[i]]; S.selImg=j; savePost(p); paintStrip(); paintSlides(); paintAlt();
+      [p.images[i],p.images[j]]=[p.images[j],p.images[i]]; [p.alt[i],p.alt[j]]=[p.alt[j],p.alt[i]]; S.selImg=j; savePost(p); paintStrip(); paintSlides(); paintAlt(); paintStudio();
     }
   };
 }
@@ -1012,7 +1023,7 @@ async function paintSlides(){
   box.innerHTML='';
   cs.forEach((c,i)=>{
     const wrap=document.createElement('div'); wrap.className='slide'; wrap.appendChild(c);
-    if(S.showGridMask&&(i===0||p.fit==='split')&&slideRatio(p)!=='3:4'){
+    if(S.overlay==='off'&&S.showGridMask&&(i===0||p.fit==='split')&&slideRatio(p)!=='3:4'){
       // profile grid shows a centred 3:4 cover-crop of slide 1
       const W=c.width,H=c.height, tr=3/4, sr=W/H; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('class','gridmask');
@@ -1020,9 +1031,10 @@ async function paintSlides(){
       if(i===0) svg.innerHTML=`<path fill="rgba(0,0,0,.45)" fill-rule="evenodd" d="M0 0H${W}V${H}H0Z M${r[0]} ${r[1]}h${r[2]}v${r[3]}h${-r[2]}Z"/><rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="none" stroke="#fff" stroke-dasharray="8 6" stroke-width="2"/>`;
       if(i===0) wrap.appendChild(svg);
     }
+    if(S.overlay!=='off'){ const sv=document.createElementNS('http://www.w3.org/2000/svg','svg'); sv.setAttribute('viewBox',`0 0 ${c.width} ${c.height}`); sv.setAttribute('class','gridmask'); sv.innerHTML=overlaySVG(c.width,c.height,S.overlay); wrap.appendChild(sv) }
     const cap=document.createElement('div'); cap.className='cap';
     const [W1,H1]=[1080,Math.round(1080*rh/rw)];
-    cap.textContent=`${i+1}/${cs.length} · ${W1}×${H1}${i===0&&S.showGridMask&&slideRatio(p)!=='3:4'?' · dashed = grid tile':''}`;
+    cap.textContent=`${i+1}/${cs.length} · ${W1}×${H1}${S.overlay==='feed'?' · dashed = feed 4:5 crop':S.overlay==='reel'?' · red = keep text and faces out (approximate)':i===0&&S.showGridMask&&slideRatio(p)!=='3:4'?' · dashed = grid tile':''}`;
     wrap.appendChild(cap); box.appendChild(wrap);
   });
 }
@@ -1086,7 +1098,7 @@ function paintExtra(){
   $('#applyOrder')&&($('#applyOrder').onclick=()=>{
     const ord=p.carousel.order.map(n=>+n-1).filter(i=>i>=0&&i<p.images.length);
     if(new Set(ord).size!==p.images.length){toast('That order does not cover every slide.');return}
-    p.images=ord.map(i=>p.images[i]); p.alt=ord.map(i=>p.alt[i]); p.carousel.order=p.images.map((_,i)=>i+1); savePost(p); paintStrip(); paintSlides(); paintAlt(); paintExtra(); toast('Slides reordered');
+    p.images=ord.map(i=>p.images[i]); p.alt=ord.map(i=>p.alt[i]); p.carousel.order=p.images.map((_,i)=>i+1); savePost(p); paintStrip(); paintSlides(); paintAlt(); paintExtra(); paintStudio(); toast('Slides reordered');
   });
 }
 function finalCaption(p){
@@ -1599,6 +1611,274 @@ async function runAI(){
   }
   S.aiBusy=false; refreshAICard();
 }
+/* ---------- studio tools: hook pack, caption tones, alt text + keywords, swipe notes, storyboard, trend-fit ---------- */
+const SPAM_TAGS=new Set(['explore','viral','reels','instagood','photooftheday','fyp','follow','like4like']);
+const cleanTags=a=>[...new Set((Array.isArray(a)?a:[]).map(x=>normTag(String(x))).filter(t=>t&&!SPAM_TAGS.has(t)))].slice(0,5);
+const STUDIO_LABEL={hooks:'Writing hooks',tones:'Writing caption tones',alt:'Writing alt text and keywords',swipe:'Planning the swipe',storyboard:'Drawing the storyboard',trend:'Checking the fit'};
+const STUDIO_ERR_OFF=['not_granted','sampling_disabled','capability_disabled','capability_removed','not_declared'];
+const aiErrText=e=>({cancelled:'',not_granted:`${AI} was not allowed for this page.`,rate_limited:`${AI} is busy or your usage limit was reached. Try again in a bit.`,invalid_json:'That came back garbled. Try again.',image_rejected:'An image could not be sent. Try fewer slides.',refused:`${AI} could not do this one.`,session_expired:`Sign in to ${AI} again, then retry.`}[e&&e.code]);
+const STUDIO_RULES=`RULES
+- Instagram allows at most 5 hashtags per post. Never use #explore, #viral, #reels, #instagood, #photooftheday or similar spam tags.
+- Be honest and specific to what is in the images. Do not invent names, places or facts.`;
+function studioCtx(p,labels){
+  const s=S.settings, n=p.images.length, reel=p.format==='reel';
+  const fmt=reel?'Reel (vertical video)':n>1?`Carousel of ${n} slides${p.fit==='split'?' (one panorama split into seamless slides)':''}`:'Single photo';
+  return `${isProduct()?`You help with Instagram posts for a product's brand account. Posts should teach something useful, never read as ads.`:`You help a photographer with their personal photography Instagram account (an Instagram Business account in the "Personal Blog" category). The goal is real reach and engagement in 2026 without sounding like a marketer.`}
+
+ACCOUNT
+Handle: ${s.handle?'@'+s.handle:'not set'} · Niche: ${s.niche||'photography (infer from the images)'} · City: ${s.city||'not given'}
+Caption voice: ${s.voice} · Language(s): ${s.language||'English'}
+What has worked for this account so far: ${learningsText()||'no data yet'}${productBlock()}
+
+THIS POST
+Format: ${fmt}
+Notes: ${p.notes||'(none; describe from the images)'}
+Location: ${p.location||'(not given)'}
+${shotContext(p)}
+Camera data: ${p.images.map((im,i)=>`${i+1}: ${exifParts(im.exif).join(', ')||'none'}`).join(' | ')||'none'}
+Current caption (may be empty): ${(p.caption||'').slice(0,600)||'(empty)'}
+Attached images:
+${labels.join('\n')||'(none)'}`;
+}
+// one runner for every studio tool: busy state, images, JSON, errors, save
+async function studioRun(key,build,apply,{noImages=false}={}){
+  const p=D(); if(!S.sample||S.studioBusy) return;
+  if(!noImages&&!p.images.length){ toast('Add photos first.'); return }
+  S.studioBusy=key; S.studioCtl=new AbortController(); repaintStudio();
+  try{
+    const {blobs,labels}=noImages?{blobs:undefined,labels:[]}:await aiImages(p);
+    const prompt=build(p,labels)+(noImages||blobs?'':'\n(Images could not be attached; rely on the notes and camera data.)');
+    const r=await S.sample.json(prompt,{images:blobs,signal:S.studioCtl.signal,cache:false,...(S.web?{kind:key}:{})});
+    if(!r||typeof r!=='object') throw {code:'invalid_json'};
+    apply(p,r); savePost(p); toast('Ready');
+  }catch(e){
+    const m=aiErrText(e); if(m!=='') toast(m||'Something went wrong. Try again.');
+    if(e&&STUDIO_ERR_OFF.includes(e.code)) S.sample=null;
+  }
+  S.studioBusy=null; S.studioCtl=null; repaintStudio();
+}
+function repaintStudio(){ paintStudio(); paintStoryboard(); paintTrend(); if($('#extraBox')) paintExtra(); }
+
+/* --- prompts --- */
+const hooksPrompt=(p,labels)=>`${studioCtx(p,labels)}
+
+TASK: hook pack
+Write 5 different opening lines for this post, one per style: curiosity, story, observation, question, bold-but-honest. Each at most 110 characters, no hashtags, specific to what is in the images, and never promising something the post does not deliver.
+For each, also say which slide should be the first frame (1-based slide number) and one short line on the crop, moment or detail to show first.
+${STUDIO_RULES}
+Reply with only this JSON:
+{"hooks":[{"style":"curiosity","text":"","firstFrame":{"slide":1,"note":""}}]}`;
+const tonesPrompt=(p,labels)=>`${studioCtx(p,labels)}
+
+TASK: caption tones
+Write 3 complete captions for this post in different tones:
+1. "story": 2 to 4 short paragraphs, personal and specific, under 900 characters
+2. "minimal": one to three short lines that let the image speak, under 200 characters
+3. "question": short and built around one easy question that invites a comment, under 400 characters
+Each caption: the first line is the hook (under 110 characters, no hashtags), at most 2 emoji, no camera settings, no signature and no hashtags inside the caption text (they are added separately). Use line breaks between paragraphs.
+For each caption also give exactly 5 hashtags (lowercase, no #): ${isProduct()?'1 broad topic tag, 2 specific subject tags, 2 audience or community tags':'1 photography-genre tag, 2 subject or style tags, 2 place or community tags'}. Vary the tag mix between tones where it makes sense. Add a short "firstComment" to pin.
+${STUDIO_RULES}
+Reply with only this JSON:
+{"variants":[{"tone":"story","caption":"","hashtags":["","","","",""],"firstComment":""},{"tone":"minimal","caption":"","hashtags":["","","","",""],"firstComment":""},{"tone":"question","caption":"","hashtags":["","","","",""],"firstComment":""}]}`;
+const altPrompt=(p,labels)=>`${studioCtx(p,labels)}
+
+TASK: alt text and search keywords
+"altText": one plain description per slide, ${p.images.length} items in slide order, each under 120 characters. Describe what is visible (subject, setting, light). Do not start with "image of" or "photo of". No invented names or places.
+"keywords": 8 to 12 phrases people actually type into Instagram search to find a post like this: 2 to 4 words each, lowercase, no #. Mix subject, genre, place and style. Only things that are really in the post.
+${STUDIO_RULES}
+Reply with only this JSON:
+{"altText":[""],"keywords":[""]}`;
+const swipePrompt=(p,labels)=>`${studioCtx(p,labels)}
+
+TASK: swipe plan for a carousel of ${p.images.length} slides
+Slide numbers are 1-based in the current order. Decide the best scroll order: strongest scroll-stopper first, a clear build, a satisfying last slide. If the photos tell a sequence (time of day, close to wide), follow it. "order" must contain every slide exactly once.
+For every slide give a role (opener, build, detail, turn, payoff or closer) and a "note": one short line in the account's voice, at most 12 words, that works as that slide's caption line.
+${STUDIO_RULES}
+Reply with only this JSON:
+{"order":[1,2,3],"reason":"one sentence","slides":[{"n":1,"role":"","note":""}]}`;
+const storyPrompt=(p,labels)=>`${studioCtx(p,labels)}
+What they want from the reel: ${p.reelNotes||'(not said)'}
+
+TASK: storyboard for a reel built from these stills
+The in-app reel builder offers these templates: dump (fast cuts, small punch-in), kenburns (slow push and drift with crossfades), pan (one wide photo panned left to right), beforeafter (pairs: raw then edited, wipe reveal), settings (each photo with camera settings typing on).
+Plan the shot order using only the attached slides, each slide at most once ("slide" is the 1-based slide number, not the image number above). Give 4 to 12 shots, total 8 to 20 seconds. For each shot: seconds, the camera move or punch-in, the transition into the next shot (hard cut, crossfade, whip, match cut, wipe), and short on-screen text (at most 7 words, empty if none). The first shot's text is the hook for the first 2 seconds. Add one "note" per shot on why it sits there (pacing, contrast, payoff).
+Pick the closest "template", "fit" ("fill" crops to 9:16, "frame" keeps the whole photo on a blurred background), an "endText" of at most 5 words and an "audioMood" (mood and tempo, no song names).
+${STUDIO_RULES}
+Reply with only this JSON:
+{"title":"","template":"dump|kenburns|pan|beforeafter|settings","fit":"fill|frame","endText":"","audioMood":"","shots":[{"slide":1,"seconds":1.5,"move":"","transition":"","text":"","note":""}]}`;
+const trendPrompt=(p,labels)=>{ const b=p.reelBuild; return `${studioCtx(p,labels)}
+${b?`Built in the app as: template ${b.template}, hook "${b.hook||'(none)'}", end text "${b.endText||'(none)'}".`:''}
+Reel description from the creator: ${p.trendNotes||'(none; judge from the attached frames and notes)'}
+
+TASK: reel format fit
+You advise on Instagram Reels craft. You do NOT have live access to what is trending today, so never claim a specific song, hashtag, effect or challenge is trending right now and never name copyrighted songs. Judge how well this reel matches what generally earns reach on Reels (watch-through, replays, sends, saves) and which format patterns suit this material.
+Give: a "fit" score from 1 to 5 with a one-line summary; "audio" (style, tempo, whether instrumental, voiceover or original sound suits it, and a short note on how to choose a track); "length" (ideal seconds as a range and why); up to 3 "format" patterns that suit the material (pattern name, why it fits, how to do it with these photos or clips); a "hookCheck" on whether the first 2 seconds work; up to 3 "watchOuts"; and one concrete "tryThis" change.
+${STUDIO_RULES}
+Reply with only this JSON:
+{"fit":{"score":3,"summary":""},"audio":{"style":"","tempo":"","vocals":"","how":""},"length":{"seconds":"","why":""},"format":[{"pattern":"","why":"","how":""}],"hookCheck":"","watchOuts":[""],"tryThis":""}`; };
+
+/* --- appliers --- */
+function applyHooks(p,r){
+  const a=(Array.isArray(r.hooks)?r.hooks:[]).map(h=>typeof h==='string'?{text:h}:h).filter(h=>h&&typeof h.text==='string'&&h.text.trim()).slice(0,5).map(h=>{
+    const ff=(h.firstFrame&&typeof h.firstFrame==='object')?h.firstFrame:{};
+    return {style:String(h.style||'').slice(0,24),text:h.text.trim().slice(0,160),slide:clamp(Math.round(+ff.slide||+h.slide||1),1,Math.max(1,p.images.length)),note:String(ff.note||h.note||'').slice(0,120)};
+  });
+  if(!a.length) throw {code:'invalid_json'};
+  p.hookPack=a;
+}
+function applyTones(p,r){
+  const a=(Array.isArray(r.variants)?r.variants:[]).filter(v=>v&&typeof v.caption==='string'&&v.caption.trim()).slice(0,3)
+    .map(v=>({tone:String(v.tone||'').slice(0,20),caption:v.caption.trim().slice(0,1500),hashtags:cleanTags(v.hashtags),firstComment:String(v.firstComment||'').slice(0,300)}));
+  if(!a.length) throw {code:'invalid_json'};
+  p.captionPack=a;
+}
+function applyAlt(p,r,replaceAll){
+  const alts=Array.isArray(r.altText)?r.altText:[];
+  const kw=[...new Set((Array.isArray(r.keywords)?r.keywords:[]).map(k=>String(k).trim().toLowerCase().replace(/^#+/,'')).filter(k=>k&&k.length<=40))].slice(0,12);
+  if(!alts.length&&!kw.length) throw {code:'invalid_json'};
+  if(alts.length) p.alt=p.images.map((_,i)=>{ const cur=p.alt[i]||'', nw=String(alts[i]||'').trim().slice(0,200); return (cur&&!replaceAll)?cur:(nw||cur) });
+  if(kw.length) p.keywords=kw;
+}
+function applySwipe(p,r){
+  const n=p.images.length, ord=(Array.isArray(r.order)?r.order:[]).map(Number);
+  const okOrd=ord.length===n&&new Set(ord).size===n&&ord.every(x=>Number.isInteger(x)&&x>=1&&x<=n);
+  let any=false;
+  for(const s of (Array.isArray(r.slides)?r.slides:[])){ const i=Math.round(+(s&&s.n))-1; if(i>=0&&i<n&&s&&s.note){ p.images[i].note=String(s.note).slice(0,140); p.images[i].role=String(s.role||'').slice(0,24); any=true } }
+  if(okOrd) p.carousel={order:ord,reason:String(r.reason||'').slice(0,240)};
+  if(!any&&!okOrd) throw {code:'invalid_json'};
+}
+function applyStory(p,r){
+  const seen=new Set(), n=p.images.length;
+  const shots=(Array.isArray(r.shots)?r.shots:[]).map(s=>({slide:Math.round(+(s&&s.slide)),seconds:+clamp(+s.seconds||1.5,.3,6).toFixed(2),move:String(s.move||'').slice(0,80),transition:String(s.transition||'').slice(0,40),text:String(s.text||'').slice(0,60),note:String(s.note||'').slice(0,140)}))
+    .filter(s=>s.slide>=1&&s.slide<=n&&!seen.has(s.slide)&&seen.add(s.slide)).slice(0,12);
+  if(!shots.length) throw {code:'invalid_json'};
+  p.storyboard={title:String(r.title||'').slice(0,60),template:TPL_KEYS.includes(r.template)?r.template:'kenburns',fit:r.fit==='frame'?'frame':'fill',endText:String(r.endText||'').slice(0,40),audioMood:String(r.audioMood||'').slice(0,140),shots,at:Date.now()};
+}
+function applyTrend(p,r){
+  const f=(r&&r.fit&&typeof r.fit==='object')?r.fit:{}, au=(r.audio&&typeof r.audio==='object')?r.audio:{}, ln=(r.length&&typeof r.length==='object')?r.length:{};
+  const list=(a,k)=>(Array.isArray(a)?a:[]).slice(0,3).map(x=>typeof x==='string'?{pattern:x}:x).filter(x=>x&&typeof x==='object').map(x=>({pattern:String(x.pattern||'').slice(0,80),why:String(x.why||'').slice(0,200),how:String(x.how||'').slice(0,200)})).filter(x=>x.pattern);
+  const t={score:clamp(Math.round(+f.score||0),0,5),summary:String(f.summary||'').slice(0,200),audio:{style:String(au.style||'').slice(0,100),tempo:String(au.tempo||'').slice(0,60),vocals:String(au.vocals||'').slice(0,60),how:String(au.how||'').slice(0,200)},length:{seconds:String(ln.seconds||'').slice(0,30),why:String(ln.why||'').slice(0,200)},format:list(r.format),hookCheck:String(r.hookCheck||'').slice(0,240),watchOuts:(Array.isArray(r.watchOuts)?r.watchOuts:[]).filter(x=>typeof x==='string').slice(0,3).map(x=>x.slice(0,200)),tryThis:String(r.tryThis||'').slice(0,240),at:Date.now()};
+  if(!t.summary&&!t.tryThis&&!t.format.length) throw {code:'invalid_json'};
+  p.trend=t;
+}
+function loadIntoBuilder(c){
+  const p=D(), bb=B();
+  bb.template=TPL_KEYS.includes(c.template)?c.template:'kenburns'; bb.fit=c.fit==='frame'?'frame':'fill'; bb.sps=clamp(+c.secondsPerSlide||1.5,.3,4); bb.bpm='';
+  bb.hook=String(c.hook||''); bb.endText=String(c.endText||bb.endText||'');
+  const ord=(Array.isArray(c.order)?c.order:[]).map(Number).filter(x=>x>=1&&x<=p.images.length); if(ord.length) bb.order=ord;
+  savePost(p); paintBuilder(); const el=$('#builder'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); toast('Loaded into the builder');
+}
+
+/* --- editor card --- */
+function studioSpin(key){ return S.studioBusy===key?`<div class="row" style="justify-content:space-between"><div class="aiwait"><span class="spin"></span><span>${esc(STUDIO_LABEL[key]||'Working')}…</span></div><button class="btn sm" data-st="stop">Stop</button></div>`:'' }
+function paintStudio(){
+  const b=$('#studioCard'); if(!b) return; const p=D(), busy=!!S.studioBusy, has=p.images.length>0;
+  const car=p.images.length>1&&p.format!=='reel'&&p.kind!=='text';
+  let h=`<div class="row" style="justify-content:space-between"><h3>More from ${AI}</h3></div>`;
+  if(!S.sample){ h+=`<p class="muted small" style="margin:0">${S.web?'These tools need AI writing: add your passcode in Profile.':'These tools need this page open inside Claude.'}</p>`; }
+  else{
+    h+=`<div class="row wrap"><button class="btn sm" data-st="hooks" ${busy||!has?'disabled':''}>5 hooks</button><button class="btn sm" data-st="tones" ${busy||!has?'disabled':''}>Caption tones</button><button class="btn sm" data-st="alt" ${busy||!has?'disabled':''}>Alt text + keywords</button>${car?`<button class="btn sm" data-st="swipe" ${busy?'disabled':''}>Plan the swipe</button>`:''}</div>`;
+    if(!has) h+=`<p class="muted small" style="margin:0">Add a photo first.</p>`;
+    if(busy&&['hooks','tones','alt','swipe'].includes(S.studioBusy)) h+=studioSpin(S.studioBusy);
+  }
+  if(p.hookPack&&p.hookPack.length) h+=`<div class="stack" style="gap:6px"><h3>Hook pack · tap to use</h3><div class="hooks">${p.hookPack.map((x,i)=>`<button class="hook" data-hp="${i}">${x.style?`<span class="muted small">${esc(x.style)}</span><br>`:''}${esc(x.text)}<br><span class="muted small">Lead with slide ${x.slide}${x.note?': '+esc(x.note):''}</span></button>`).join('')}</div></div>`;
+  if(p.captionPack&&p.captionPack.length) h+=`<div class="stack" style="gap:8px"><h3>Caption tones</h3>${p.captionPack.map((v,i)=>`<div class="card stack" style="gap:6px;background:var(--bg)"><div class="row" style="justify-content:space-between"><strong style="text-transform:capitalize">${esc(v.tone||'Option '+(i+1))}</strong><button class="btn sm primary" data-cp="${i}">Use this</button></div><div class="small" style="white-space:pre-wrap;margin:0">${esc(v.caption)}</div>${v.hashtags.length?`<div class="mono muted">${v.hashtags.map(t=>'#'+esc(t)).join(' ')}</div>`:''}</div>`).join('')}<span class="muted small">Using one replaces your caption, hashtags and pinned comment.</span></div>`;
+  if(p.keywords&&p.keywords.length){
+    const hay=((p.caption||'')+' '+(p.alt||[]).join(' ')).toLowerCase();
+    h+=`<div class="stack" style="gap:6px"><h3>Search keywords</h3><div class="row wrap" style="gap:6px">${p.keywords.map(k=>{const on=hay.includes(k);return `<span class="kw ${on?'on':''}">${esc(k)}${on?' ✓':''}</span>`}).join('')}</div><span class="muted small">✓ means it already appears in your caption or alt text. Instagram search reads both, so work two or three of the others in naturally.</span><div class="row"><button class="btn sm" data-st="copykw">Copy keywords</button>${(p.alt||[]).some(Boolean)&&!busy?`<button class="btn sm ghost" data-st="altall">Replace all alt text</button>`:''}</div></div>`;
+  }
+  if(car&&p.images.some(im=>im.note)){
+    h+=`<div class="stack" style="gap:6px"><h3>Slide by slide</h3>${p.images.map((im,i)=>`<div class="nrow"><img src="${esc(im.src)}" alt="Slide ${i+1}"><label class="f" style="gap:2px" for="sn${i}"><span class="muted small">Slide ${i+1}${im.role?' · '+esc(im.role):''}</span><input type="text" id="sn${i}" data-note="${i}" value="${esc(im.note||'')}" placeholder="One line for this slide"></label></div>`).join('')}<div class="row"><button class="btn sm" data-st="notes2cap">Add numbered notes to caption</button></div></div>`;
+  }
+  b.innerHTML=h;
+  b.onclick=e=>{
+    const t=e.target.closest('[data-st],[data-hp],[data-cp]'); if(!t) return;
+    if(t.dataset.hp!=null){ const x=p.hookPack[+t.dataset.hp]; if(!x) return; const lines=(p.caption||'').split('\n'); lines[0]=x.text; p.caption=lines.join('\n'); $('#cap').value=p.caption; touch(); paintFinal(); paintStudio(); toast('Opening line set'); return }
+    if(t.dataset.cp!=null){ const v=p.captionPack[+t.dataset.cp]; if(!v) return; p.caption=v.caption; if(v.hashtags.length) p.tags=v.hashtags.slice(); if(v.firstComment) p.firstComment=v.firstComment; $('#cap').value=p.caption; $('#fc').value=p.firstComment||''; touch(); paintTags(); paintFinal(); paintChecks(); paintStudio(); toast('Caption set'); return }
+    const k=t.dataset.st;
+    if(k==='stop') S.studioCtl&&S.studioCtl.abort();
+    else if(k==='hooks') studioRun('hooks',hooksPrompt,applyHooks);
+    else if(k==='tones') studioRun('tones',tonesPrompt,applyTones);
+    else if(k==='alt') studioRun('alt',altPrompt,(pp,r)=>applyAlt(pp,r,false)).then(()=>paintAlt());
+    else if(k==='altall') studioRun('alt',altPrompt,(pp,r)=>applyAlt(pp,r,true)).then(()=>paintAlt());
+    else if(k==='swipe') studioRun('swipe',swipePrompt,applySwipe);
+    else if(k==='copykw'){ navigator.clipboard.writeText(p.keywords.join(', ')).then(()=>toast('Keywords copied'),()=>toast('Could not copy. Long-press the text instead.')) }
+    else if(k==='notes2cap'){
+      const lines=p.images.map((im,i)=>im.note?`${i+1}/ ${im.note}`:'').filter(Boolean); if(!lines.length) return;
+      const ls=(p.caption||'').split('\n'); while(ls.length&&(/^\d+\/ /.test(ls[ls.length-1])||!ls[ls.length-1].trim())) ls.pop();
+      p.caption=(ls.length?ls.join('\n')+'\n\n':'')+lines.join('\n'); $('#cap').value=p.caption; touch(); paintFinal(); toast('Notes added to the caption');
+    }
+  };
+  b.oninput=e=>{ const i=e.target.dataset&&e.target.dataset.note; if(i!=null&&p.images[+i]){ p.images[+i].note=e.target.value; touch() } };
+}
+
+/* --- reels view: storyboard and trend-fit --- */
+function paintStoryboard(){
+  const b=$('#storyCard'); if(!b) return; const p=D(), sb=p.storyboard, busy=!!S.studioBusy, has=p.images.length>0;
+  let h=`<h3>Storyboard from your photos</h3>`;
+  if(!S.sample) h+=`<p class="muted small" style="margin:0">${S.web?'Storyboards need AI writing: add your passcode in Profile.':'Storyboards need this page open inside Claude.'}</p>`;
+  else{
+    h+=`<div class="row"><button class="btn primary sm" data-sb="make" ${busy||!has?'disabled':''}>${sb?'Redraw storyboard':'Storyboard these photos'}</button><span class="muted small">${has?'Shot order, timing, transitions and on-screen text.':'Add photos first.'}</span></div>`;
+    if(S.studioBusy==='storyboard') h+=studioSpin('storyboard');
+  }
+  if(sb&&sb.shots.length){
+    let t=0; const rows=sb.shots.map((s,i)=>{ const a=t; t+=s.seconds; const im=p.images[s.slide-1];
+      return `<div class="sbshot">${im?`<img src="${esc(im.src)}" alt="Slide ${s.slide}">`:'<span></span>'}<div><div><strong>Shot ${i+1}</strong> <span class="mono muted">${a.toFixed(1)}–${t.toFixed(1)}s · slide ${s.slide}</span></div>${s.move?`<div class="small">${esc(s.move)}${s.transition?` <span class="muted">→ ${esc(s.transition)}</span>`:''}</div>`:''}${s.text?`<div class="small">Text: “${esc(s.text)}”</div>`:''}${s.note?`<div class="small muted">${esc(s.note)}</div>`:''}</div></div>`; }).join('');
+    h+=`<div>${sb.title?`<div class="small"><strong>${esc(sb.title)}</strong> <span class="muted">· about ${t.toFixed(0)}s</span></div>`:`<div class="small muted">About ${t.toFixed(0)}s</div>`}${rows}</div>${sb.audioMood?`<div class="small"><strong>Audio:</strong> ${esc(sb.audioMood)}</div>`:''}<div class="row"><button class="btn primary sm" data-sb="build">Build this reel</button><button class="btn sm" data-sb="copy">Copy storyboard</button></div>`;
+  }
+  b.innerHTML=h;
+  b.onclick=e=>{
+    const t=e.target.closest('[data-sb],[data-st]'); if(!t) return;
+    if(t.dataset.st==='stop'){ S.studioCtl&&S.studioCtl.abort(); return }
+    const k=t.dataset.sb;
+    if(k==='make') studioRun('storyboard',storyPrompt,applyStory);
+    else if(k==='build'&&sb) loadIntoBuilder({template:sb.template,fit:sb.fit,secondsPerSlide:sb.shots.reduce((a,s)=>a+s.seconds,0)/sb.shots.length,hook:sb.shots[0].text,endText:sb.endText,order:sb.shots.map(s=>s.slide)});
+    else if(k==='copy'&&sb){
+      let c=0; const txt=[sb.title||'Reel storyboard',...sb.shots.map((s,i)=>{ const a=c; c+=s.seconds; return `${i+1}. ${a.toFixed(1)}-${c.toFixed(1)}s · slide ${s.slide} · ${s.move||''}${s.transition?' → '+s.transition:''}${s.text?' · text: "'+s.text+'"':''}` }),sb.audioMood?'Audio: '+sb.audioMood:''].filter(Boolean).join('\n');
+      navigator.clipboard.writeText(txt).then(()=>toast('Storyboard copied'),()=>toast('Could not copy. Long-press the text instead.'));
+    }
+  };
+}
+function paintTrend(){
+  const b=$('#trendCard'); if(!b) return; const p=D(), t=p.trend, busy=!!S.studioBusy;
+  let h=`<h3>Trend-fit check</h3><p class="small muted" style="margin:0">Format and audio fit based on how Reels generally earn reach. It cannot see what is trending today: in Instagram's audio picker, look for the ↗ arrow.</p>`;
+  if(!S.sample) h+=`<p class="muted small" style="margin:0">${S.web?'Add your passcode in Profile to turn this on.':'This needs the page open inside Claude.'}</p>`;
+  else{
+    h+=`<label class="f" for="trNotes">Describe the reel <span class="hint">What happens, how long it runs, the audio you have in mind. Photos from your current post are read too.</span><textarea id="trNotes" rows="3" placeholder="e.g. 12 second photo dump of the market at dawn, thinking of a lo-fi track">${esc(p.trendNotes||'')}</textarea></label>
+    <div class="row"><button class="btn primary sm" data-tr="run" ${busy?'disabled':''}>${t?'Check again':'Check the fit'}</button></div>`;
+    if(S.studioBusy==='trend') h+=studioSpin('trend');
+  }
+  if(t){
+    h+=`<div class="stack" style="gap:8px">
+      <div><span class="pill ${t.score>=4?'posted':''}">Fit ${t.score}/5</span> <span class="small">${esc(t.summary)}</span></div>
+      ${(t.audio.style||t.audio.tempo||t.audio.vocals||t.audio.how)?`<div class="small"><strong>Audio:</strong> ${[t.audio.style,t.audio.tempo,t.audio.vocals].filter(Boolean).map(esc).join(' · ')}${t.audio.how?`<br><span class="muted">${esc(t.audio.how)}</span>`:''}</div>`:''}
+      ${t.length.seconds?`<div class="small"><strong>Length:</strong> ${esc(t.length.seconds)}${t.length.why?` <span class="muted">· ${esc(t.length.why)}</span>`:''}</div>`:''}
+      ${t.hookCheck?`<div class="small"><strong>First 2 seconds:</strong> ${esc(t.hookCheck)}</div>`:''}
+      ${t.format.length?`<div class="small"><strong>Formats that suit it</strong><ul style="margin:4px 0 0;padding-left:20px">${t.format.map(f=>`<li><strong>${esc(f.pattern)}</strong>${f.why?': '+esc(f.why):''}${f.how?` <span class="muted">${esc(f.how)}</span>`:''}</li>`).join('')}</ul></div>`:''}
+      ${t.watchOuts.length?`<div class="small"><strong>Watch out</strong><ul style="margin:4px 0 0;padding-left:20px">${t.watchOuts.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}
+      ${t.tryThis?`<div class="tip">${esc(t.tryThis)}</div>`:''}</div>`;
+  }
+  b.innerHTML=h;
+  b.onclick=e=>{
+    const x=e.target.closest('[data-tr],[data-st]'); if(!x) return;
+    if(x.dataset.st==='stop'){ S.studioCtl&&S.studioCtl.abort(); return }
+    if(x.dataset.tr==='run'){ if(!p.images.length&&!(p.trendNotes||'').trim()){ toast('Describe the reel or add photos first.'); return } studioRun('trend',trendPrompt,applyTrend,{noImages:!p.images.length}) }
+  };
+  b.oninput=e=>{ if(e.target.id==='trNotes'){ p.trendNotes=e.target.value; touch() } };
+}
+
+/* --- preview overlays: feed 4:5 crop and reel/story safe zones --- */
+function overlaySVG(W,H,mode){
+  const cover=tr=>{ const sr=W/H; return sr>tr?[(W-H*tr)/2,0,H*tr,H]:[0,(H-W/tr)/2,W,W/tr] };
+  const dim=r=>`<path fill="rgba(0,0,0,.5)" fill-rule="evenodd" d="M0 0H${W}V${H}H0Z M${r[0]} ${r[1]}h${r[2]}v${r[3]}h${-r[2]}Z"/>`;
+  const fs=Math.round(W*.034), txt=(x,y,s)=>`<text x="${x}" y="${y}" font-size="${fs}" font-family="Outfit,system-ui,sans-serif" font-weight="700" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="${fs*.14}" paint-order="stroke" text-anchor="middle">${s}</text>`;
+  if(mode==='feed'){ const r=cover(4/5); return dim(r)+`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="none" stroke="#fff" stroke-dasharray="8 6" stroke-width="2"/>`+txt(W/2,r[1]+fs*1.6,'Feed 4:5') }
+  const r=cover(9/16), [x,y,w,h]=r, top=h*.14, bot=h*.35, side=w*.06, red='rgba(194,48,42,.38)';
+  return dim(r)+`<rect x="${x}" y="${y}" width="${w}" height="${top}" fill="${red}"/><rect x="${x}" y="${y+h-bot}" width="${w}" height="${bot}" fill="${red}"/><rect x="${x}" y="${y+top}" width="${side}" height="${h-top-bot}" fill="${red}"/><rect x="${x+w-side}" y="${y+top}" width="${side}" height="${h-top-bot}" fill="${red}"/>`
+    +`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#fff" stroke-dasharray="8 6" stroke-width="2"/>`
+    +txt(x+w/2,y+top/2+fs*.35,'top bar')+txt(x+w/2,y+h-bot/2+fs*.35,'caption, audio, buttons');
+}
+
 function templateDraft(){
   const p=D(), s=S.settings;
   const place=p.location||s.city||'';
@@ -1929,13 +2209,15 @@ function renderReels(m){
         <div id="ideaCtl"></div>
       </div>
       <div id="ideas" class="stack"></div>
+      <div class="card stack" id="storyCard"></div>
+      <div class="card stack" id="trendCard"></div>
     </div>
     <div class="stack">
       <div class="card stack" id="builder"></div>
       <div class="card stack" id="shots"></div>
     </div>
   </div>`;
-  paintRStrip(); paintIdeaCtl(); paintIdeas(); paintBuilder(); paintShots();
+  paintRStrip(); paintIdeaCtl(); paintIdeas(); paintStoryboard(); paintTrend(); paintBuilder(); paintShots();
 }
 function paintRStrip(){
   const p=D(), b=$('#rStrip'); if(!b) return;
@@ -2016,11 +2298,7 @@ function paintIdeas(){
   b.onclick=e=>{
     const bt=e.target.closest('[data-build]');
     if(bt){
-      const c=cs[+bt.dataset.build], bb=B();
-      bb.template=c.template; bb.fit=c.fit==='frame'?'frame':'fill'; bb.sps=clamp(+c.secondsPerSlide||1.5,.3,4); bb.bpm='';
-      bb.hook=String(c.hook||''); bb.endText=String(c.endText||bb.endText||'');
-      const ord=(Array.isArray(c.order)?c.order:[]).map(Number).filter(x=>x>=1&&x<=p.images.length); if(ord.length) bb.order=ord;
-      savePost(p); paintBuilder(); $('#builder').scrollIntoView({behavior:'smooth',block:'start'}); toast('Loaded into the builder'); return;
+      loadIntoBuilder(cs[+bt.dataset.build]); return;
     }
     const ch=e.target.closest('[data-chook]');
     if(ch){ const h=String(cs[+ch.dataset.chook].captionHook); const lines=(p.caption||'').split('\n'); lines[0]=h; p.caption=lines.join('\n'); touch(); toast('Caption opener set. See it in Create.') }

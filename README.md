@@ -23,6 +23,8 @@ It runs in two places from the same file:
 - Crop to 3:4, 4:5 or 1:1 with a tap-to-set focus point, add white, black or blurred borders, or split a panorama into a seamless carousel
 - Claude writes the caption, three alternative hooks, five hashtags (Instagram's limit), alt text and a pinned first comment
 - A final caption preview with the "…more" cut line, a camera line and your signature, ready to copy
+- **More from AI** card: a pack of 5 hooks (each with which slide to lead with), three caption tones (story, minimal, question) with their own 5 hashtags, alt text plus search keywords (shows which are already in your caption), and for carousels a swipe plan with a one-line note per slide that you can add to the caption as numbered lines
+- Preview overlays: a feed 4:5 crop and Reel/Story safe zones (approximate) over your slides
 - Saves finished 1080px slides
 
 **Reach check**
@@ -33,6 +35,8 @@ It runs in two places from the same file:
 - Three reel concepts from your photos, at least two buildable straight away
 - In-browser reel builder: photo dump, slow pans, panorama pan, before/after wipe, settings reveal; BPM-matched cuts; exports a 1080×1920 MP4
 - Video clips are read as six frames so Claude can follow what happens
+- Storyboard from your photos: shot order, seconds, camera move, transition and on-screen text per shot, one tap to load it into the builder
+- Trend-fit check: audio style, length and format patterns for a reel idea. It judges general fit and cannot see live trends
 - Shot lists for photo walks, with tick-off checklists
 
 **Grid and Plan**
